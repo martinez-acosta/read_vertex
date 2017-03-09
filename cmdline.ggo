@@ -1,0 +1,8 @@
+purpose "Lee vértices"
+usage "read_vertex_t [OPTION...]"
+description "Lee vértices de un archivo obj"
+package "read_vertex_t"
+version "0.1"
+
+#Options
+option "input" i "archivo a leer" string required
