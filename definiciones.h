@@ -1,0 +1,43 @@
+typedef float float_matrix[4][4];
+
+typedef struct vertex {
+  float x;
+  float y;
+  float z;
+  float w;
+  struct vertex *next;
+} vertex;
+
+typedef struct face {
+  int v1;
+  int v2;
+  int v3;
+  struct face *next;
+} face;
+
+typedef struct object_coordinates {
+  float xmin;
+  float xmax;
+  float ymin;
+  float ymax;
+  float zmin;
+  float zmax;
+} object_coordinates;
+
+typedef struct objfile {
+  char filename[255];      // nombre del archivo
+  struct face *faces;      // caras del objfile
+  struct vertex *vertexes; // vértices del archivo objfile
+  float smallest;          // vértice más negativo
+  struct object_coordinates obj_coordinates;
+  float_matrix M[4][4];
+} objfile;
+
+typedef struct point {
+  int x;
+  int y;
+  int z;
+  int w;
+} point;
+
+

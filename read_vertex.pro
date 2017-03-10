@@ -7,4 +7,5 @@ SOURCES += main.c \
     cmdline.c
 
 HEADERS += \
-    cmdline.h
+    cmdline.h \
+    definiciones.h
