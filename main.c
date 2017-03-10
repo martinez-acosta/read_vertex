@@ -6,37 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void scale_to(struct objfile *file, struct vertex *p) {
-  int i, j;
-
-  float_matrix *M = file->M;
-  const float vector[4] = {p->x, p->y, p->z, p->w};
-  float vector_tmp[4];
-
-  // Por cada vértice que haya
-  for (struct vertex *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
-    // limpiamos estructuras
-    memset(M, 0, sizeof(float) * 4 * 4);
-
-    // asignamos valores en la matriz
-    (*M)[0][0] = p->x;
-    (*M)[1][1] = p->y;
-    (*M)[2][2] = p->z;
-    (*M)[3][3] = p->w;
-
-    // Multiplicamos la matriz por el vector (Ax)
-    for (j = 0; j < 4; j++) {
-      for (i = 0; i < 4; i++) {
-        vector_tmp[j] += (*M)[i][j] * vector[i];
-      }
-    }
-    // Asignamos nuevos valores a los vértices
-    tmp->x = vector_tmp[0];
-    tmp->y = vector_tmp[1];
-    tmp->z = vector_tmp[2];
-    tmp->w = vector_tmp[3];
-  }
-}
+void scale_to(struct objfile *file, struct vertex *p) {}
 
 void translate_to(struct objfile *file, struct vertex *p) {
   int i, j;
@@ -57,6 +27,59 @@ void translate_to(struct objfile *file, struct vertex *p) {
   (*M)[1][3] = p->y;
   (*M)[2][3] = p->z;
   (*M)[3][3] = p->w;
+
+  // Por cada vértice que haya
+  for (struct vertex *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+
+    memset(&vector_tmp, 0, sizeof(float) * 4);
+    // Asignamos vector a transformar
+    vector[0] = tmp->x;
+    vector[1] = tmp->y;
+    vector[2] = tmp->z;
+    vector[3] = tmp->w;
+
+    // Multiplicamos la matriz por el vector (Ax)
+    for (j = 0; j < 4; j++) {
+      for (i = 0; i < 4; i++) {
+        vector_tmp[j] += (*M)[j][i] * vector[i];
+        // printf("M[%d][%d] = %f\n", i, j, (*M)[i][j]);
+      }
+    }
+    // Asignamos nuevos valores a los vértices
+    tmp->x = vector_tmp[0];
+    tmp->y = vector_tmp[1];
+    tmp->z = vector_tmp[2];
+    tmp->w = vector_tmp[3];
+  }
+}
+
+void normalize(struct objfile *file, const float max_float) {
+  for (struct vertex *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+    tmp->x /= max_float;
+    tmp->y /= max_float;
+    tmp->z /= max_float;
+  }
+}
+
+void viewport_transformation(struct objfile *file, int res_x, int res_y) {
+  int i, j;
+
+  float_matrix *M = file->M;
+  float vector[4];
+  float vector_tmp[4];
+
+  // limpiamos estructuras
+  memset(M, 0, sizeof(float) * 4 * 4);
+  memset(&vector_tmp, 0, sizeof(float) * 4);
+
+  // asignamos valores en la matriz
+  (*M)[0][0] = (res_x - 0) / 2;
+  (*M)[1][1] = (res_y - 0) / 2;
+  (*M)[2][2] = 1 / 2;
+  (*M)[0][3] = (res_x + 0) / 2;
+  (*M)[1][3] = (res_y - 0) / 2;
+  (*M)[2][3] = 1 / 2;
+  (*M)[3][3] = 1;
 
   // Por cada vértice que haya
   for (struct vertex *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
@@ -119,6 +142,20 @@ float smallest_float(float first, float second, float third) {
     tmp = first;
   } else {
     if (second < first && second < third) {
+      tmp = second;
+    } else {
+      tmp = third;
+    }
+  }
+  return tmp;
+}
+
+float greatest_float(float first, float second, float third) {
+  float tmp;
+  if (first > second && first > third) {
+    tmp = first;
+  } else {
+    if (second > first && second > third) {
       tmp = second;
     } else {
       tmp = third;
@@ -282,26 +319,44 @@ int main(int argc, char *argv[]) {
   // Calculamos las coordenadas del objeto
   get_object_coordinates(&file);
 
-  // Obtenemos el valor más pequeño
+  // Obtenemos el valor más grande y el más chico
+  float greatest =
+      greatest_float(file.obj_coordinates.xmax, file.obj_coordinates.ymax,
+                     file.obj_coordinates.zmax);
+
   float smallest =
       smallest_float(file.obj_coordinates.xmin, file.obj_coordinates.ymin,
                      file.obj_coordinates.zmin);
-  smallest = fabsf(smallest);
-  struct vertex p = {smallest, smallest, smallest, 1};
-  // Trasladamos el objeto a los ejes positivos
-  translate_to(&file, &p);
 
-  // Recalculamos las nuevas coordenadas de objeto; debe haber solo coordenadas positivas
+  float max_float;
+
+  // Vemos cuál valor absoluto es mayor para normalizar el objeto
+  if (fabsf(smallest) > fabsf(greatest)) {
+    max_float = fabsf(smallest);
+  } else {
+    max_float = fabsf(greatest);
+  }
+
+  // Normalizamos el objeto al espacio acotado por el cubo unitario
+  normalize(&file, max_float);
+
+  // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices
+  // dentro del cubo unitario
   get_object_coordinates(&file);
 
-  // Escalamos
-  p.x = (1920 - 0) / (file.obj_coordinates.xmax - file.obj_coordinates.xmin);
-  p.y = (1080 - 0) / (file.obj_coordinates.ymax - file.obj_coordinates.ymin);
-  p.z = 1;
-  p.w = 1;
-  scale_to(&file, &p);
-  // Trasladamos a las coordenadas de imagen
+  // Realizamos todas las transformaciones que queramos:
+  // rotación, traslación,escalamiento; todas acotadas en el cubo unitario
 
+  // Terminadas las transformaciones, trasladamos a espacio de imagen (Viewport
+  // transformation)
+  file.res_x = 1920;
+  file.res_y = 1080;
+  viewport_transformation(&file, file.res_x, file.res_y);
+
+  // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices dentro del rango de la imagen
+  get_object_coordinates(&file);
+
+  //Rasterizamos
   struct vertex *p0, *p1, *p2;
   int j;
 

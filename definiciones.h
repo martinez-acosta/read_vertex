@@ -31,6 +31,8 @@ typedef struct objfile {
   float smallest;          // vértice más negativo
   struct object_coordinates obj_coordinates;
   float_matrix M[4][4];
+  int res_x;
+  int res_y;
 } objfile;
 
 typedef struct point {
@@ -39,5 +41,3 @@ typedef struct point {
   int z;
   int w;
 } point;
-
-
