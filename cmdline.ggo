@@ -6,3 +6,5 @@ version "0.1"
 
 #Options
 option "input" i "archivo a leer" string required
+option "output" o "archivo de salida" string required
+option "resolution" - "resolución de la imagen en la forma <x,y>" string required

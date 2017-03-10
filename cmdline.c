@@ -34,9 +34,11 @@ const char *gengetopt_args_info_versiontext = "";
 const char *gengetopt_args_info_description = "Lee vértices de un archivo obj";
 
 const char *gengetopt_args_info_help[] = {
-  "  -h, --help          Print help and exit",
-  "  -V, --version       Print version and exit",
-  "  -i, --input=STRING  archivo a leer",
+  "  -h, --help               Print help and exit",
+  "  -V, --version            Print version and exit",
+  "  -i, --input=STRING       archivo a leer",
+  "  -o, --output=STRING      archivo de salida",
+  "      --resolution=STRING  resolución de la imagen en la forma <x,y>",
     0
 };
 
@@ -65,6 +67,8 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
   args_info->input_given = 0 ;
+  args_info->output_given = 0 ;
+  args_info->resolution_given = 0 ;
 }
 
 static
@@ -73,6 +77,10 @@ void clear_args (struct gengetopt_args_info *args_info)
   FIX_UNUSED (args_info);
   args_info->input_arg = NULL;
   args_info->input_orig = NULL;
+  args_info->output_arg = NULL;
+  args_info->output_orig = NULL;
+  args_info->resolution_arg = NULL;
+  args_info->resolution_orig = NULL;
   
 }
 
@@ -84,6 +92,8 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->help_help = gengetopt_args_info_help[0] ;
   args_info->version_help = gengetopt_args_info_help[1] ;
   args_info->input_help = gengetopt_args_info_help[2] ;
+  args_info->output_help = gengetopt_args_info_help[3] ;
+  args_info->resolution_help = gengetopt_args_info_help[4] ;
   
 }
 
@@ -169,6 +179,10 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
 
   free_string_field (&(args_info->input_arg));
   free_string_field (&(args_info->input_orig));
+  free_string_field (&(args_info->output_arg));
+  free_string_field (&(args_info->output_orig));
+  free_string_field (&(args_info->resolution_arg));
+  free_string_field (&(args_info->resolution_orig));
   
   
 
@@ -205,6 +219,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "version", 0, 0 );
   if (args_info->input_given)
     write_into_file(outfile, "input", args_info->input_orig, 0);
+  if (args_info->output_given)
+    write_into_file(outfile, "output", args_info->output_orig, 0);
+  if (args_info->resolution_given)
+    write_into_file(outfile, "resolution", args_info->resolution_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -324,6 +342,18 @@ cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *pro
   if (! args_info->input_given)
     {
       fprintf (stderr, "%s: '--input' ('-i') option required%s\n", prog_name, (additional_error ? additional_error : ""));
+      error_occurred = 1;
+    }
+  
+  if (! args_info->output_given)
+    {
+      fprintf (stderr, "%s: '--output' ('-o') option required%s\n", prog_name, (additional_error ? additional_error : ""));
+      error_occurred = 1;
+    }
+  
+  if (! args_info->resolution_given)
+    {
+      fprintf (stderr, "%s: '--resolution' option required%s\n", prog_name, (additional_error ? additional_error : ""));
       error_occurred = 1;
     }
   
@@ -472,10 +502,12 @@ cmdline_parser_internal (
         { "help",	0, NULL, 'h' },
         { "version",	0, NULL, 'V' },
         { "input",	1, NULL, 'i' },
+        { "output",	1, NULL, 'o' },
+        { "resolution",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVi:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVi:o:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -503,8 +535,36 @@ cmdline_parser_internal (
             goto failure;
         
           break;
+        case 'o':	/* archivo de salida.  */
+        
+        
+          if (update_arg( (void *)&(args_info->output_arg), 
+               &(args_info->output_orig), &(args_info->output_given),
+              &(local_args_info.output_given), optarg, 0, 0, ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "output", 'o',
+              additional_error))
+            goto failure;
+        
+          break;
 
         case 0:	/* Long option with no short option */
+          /* resolución de la imagen en la forma <x,y>.  */
+          if (strcmp (long_options[option_index].name, "resolution") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->resolution_arg), 
+                 &(args_info->resolution_orig), &(args_info->resolution_given),
+                &(local_args_info.resolution_given), optarg, 0, 0, ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "resolution", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          
+          break;
         case '?':	/* Invalid option.  */
           /* `getopt_long' already printed an error message.  */
           goto failure;

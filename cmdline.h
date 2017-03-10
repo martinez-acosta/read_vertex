@@ -42,10 +42,18 @@ struct gengetopt_args_info
   char * input_arg;	/**< @brief archivo a leer.  */
   char * input_orig;	/**< @brief archivo a leer original value given at command line.  */
   const char *input_help; /**< @brief archivo a leer help description.  */
+  char * output_arg;	/**< @brief archivo de salida.  */
+  char * output_orig;	/**< @brief archivo de salida original value given at command line.  */
+  const char *output_help; /**< @brief archivo de salida help description.  */
+  char * resolution_arg;	/**< @brief resolución de la imagen en la forma <x,y>.  */
+  char * resolution_orig;	/**< @brief resolución de la imagen en la forma <x,y> original value given at command line.  */
+  const char *resolution_help; /**< @brief resolución de la imagen en la forma <x,y> help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int input_given ;	/**< @brief Whether input was given.  */
+  unsigned int output_given ;	/**< @brief Whether output was given.  */
+  unsigned int resolution_given ;	/**< @brief Whether resolution was given.  */
 
 } ;
 

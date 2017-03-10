@@ -1,5 +1,6 @@
 #include "cmdline.h"
 #include "definiciones.h"
+#include "raster_lines.h"
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -227,7 +228,7 @@ void get_vertexes_and_faces(struct objfile *file) {
   struct face *tmp_vertex_face;
 
   // Abrimos el archivo
-  fp = fopen(file->filename, "r");
+  fp = fopen(file->inputfile, "r");
 
   if (!fp)
     read_vertex_fatal("Error from fopen() in main()", strerror(errno));
@@ -245,6 +246,8 @@ void get_vertexes_and_faces(struct objfile *file) {
 
   float tmp_smallest = 0;
   // Leemos línea por línea
+  int n_vertices = 0;
+  int n_caras = 0;
   while ((read = getline(&line, &len, fp)) != -1) {
     // Obtenemos vértices
     if (*(line + 0) == 'v' && *(line + 1) == ' ') {
@@ -256,6 +259,7 @@ void get_vertexes_and_faces(struct objfile *file) {
         read_vertex_fatal("Error from malloc(struct vertex) in get_info_file()",
                           strerror(errno));
       tmp_vertex = tmp_vertex->next;
+      n_vertices++;
     }
 
     // Obtenemos caras
@@ -269,7 +273,9 @@ void get_vertexes_and_faces(struct objfile *file) {
             strerror(errno));
       tmp_vertex_face = tmp_vertex_face->next;
     }
+    n_caras++;
   }
+  printf("Número de caras: %d Número de vértices: %d\n", n_caras, n_vertices);
   tmp_vertex_face->next = NULL;
   tmp_vertex->next = NULL;
   // Cerrramos archivo
@@ -290,7 +296,7 @@ void print_info(struct objfile *file) {
 }
 
 struct vertex *get_vertex(int p, struct vertex *vertexes) {
-  for (int i = 0; i <= p; i++)
+  for (int i = 0; i < p; i++)
     vertexes = vertexes->next;
   return vertexes;
 }
@@ -298,8 +304,9 @@ struct vertex *get_vertex(int p, struct vertex *vertexes) {
 int main(int argc, char *argv[]) {
   struct gengetopt_args_info args_info;
   struct objfile file;
+  struct frame image;
 
-  // Obtenemos valores de entrada
+  // Inicializamos función para obtener datos de entrada
   if (cmdline_parser(argc, argv, &args_info))
     read_vertex_fatal("Error from cmdline_parse() in main()", strerror(errno));
 
@@ -307,11 +314,38 @@ int main(int argc, char *argv[]) {
   if (!args_info.input_given)
     read_vertex_error("Especifique un nombre de archivo");
 
-  // Limpiamos estructura a usar
-  memset(&file, 0, sizeof(file));
+  // Limpiamos estructuras a usar
+  memset(&file, 0, sizeof(struct objfile));
+  memset(&image, 0, sizeof(struct frame));
 
-  // Copiamos el nombre de archivo
-  strcpy(file.filename, args_info.input_arg);
+  // Obtenemos datos de entrada
+
+  // Nombre de archivo de entrada
+  strcpy(file.inputfile, args_info.input_arg);
+  // Nombre de archivo de salida
+  strcpy(file.outputfile, args_info.output_arg);
+  strcpy(image.output, args_info.output_arg);
+
+  // Resolución de la imagen
+  char *str_tmp;
+  // Coordenada x
+  str_tmp = strtok(args_info.resolution_arg, ",");
+
+  if (!str_tmp)
+    read_vertex_error("error en resolución x");
+
+  image.cols = strtol(str_tmp, (char **)NULL, 10);
+
+  // Coordenada y
+  str_tmp = strtok(NULL, "\n\r\v\f");
+
+  if (!str_tmp)
+    read_vertex_error("error en resolución y");
+
+  image.rows = strtol(str_tmp, (char **)NULL, 10);
+
+  file.res_x = image.cols;
+  file.res_y = image.rows;
 
   // Obtenemos vértices y caras
   get_vertexes_and_faces(&file);
@@ -349,29 +383,53 @@ int main(int argc, char *argv[]) {
 
   // Terminadas las transformaciones, trasladamos a espacio de imagen (Viewport
   // transformation)
-  file.res_x = 1920;
-  file.res_y = 1080;
   viewport_transformation(&file, file.res_x, file.res_y);
 
-  // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices dentro del rango de la imagen
+  // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices
+  // dentro del rango de la imagen
   get_object_coordinates(&file);
 
-  //Rasterizamos
-  struct vertex *p0, *p1, *p2;
-  int j;
+  // Preparamos archivo de salida
+  memset(image.output, 0, 255);
+  strcpy(image.output, args_info.output_arg);
 
-  // calculamos los extremos de cada línea a dibujar en la imagen
+  // Reservamos la memoria que usaremos
+  image.buffer = malloc(image.cols * image.rows * sizeof(int));
+
+  if (!image.buffer)
+    read_vertex_fatal("Error from function malloc() in main()",
+                      strerror(errno));
+
+  int r, g, b, i, j;
+  r = g = b = 255;
+
+  // Creamos un fondo blanco en nuestra imagen
+  for (j = 0; j < image.rows; j++)
+    for (i = 0; i < image.cols; i++)
+      image.buffer[image.cols * j + i] = (r << 16) | (g << 8) | (b << 0);
+
+  struct vertex *p0, *p1, *p2;
+
+  // Por cada cara obtenemos los vértices del triángulo a dibujar
   for (struct face *f = file.faces; f != NULL; f = f->next) {
-    for (j = 0; j < 3; j++) {
-      // obtenemos los vértices
-      p0 = get_vertex(f->v1, file.vertexes);
-      p1 = get_vertex(f->v2, file.vertexes);
-      p2 = get_vertex(f->v3, file.vertexes);
-      // los procesamos a pares
-      // p0 con p1
-      // p1 con p2
-      // p2 con p3
-    }
+    // obtenemos los vértices
+    p0 = get_vertex(f->v1, file.vertexes);
+    p1 = get_vertex(f->v2, file.vertexes);
+    p2 = get_vertex(f->v3, file.vertexes);
+    // los procesamos a pares
+    // p0 con p1
+    bresenham_line(round(p0->x), round(p0->y), round(p1->x), round(p1->y),
+                   &image);
+    // p1 con p2
+    bresenham_line(round(p1->x), round(p1->y), round(p2->x), round(p2->y),
+                   &image);
+    // p2 con p0
+    bresenham_line(round(p2->x), round(p2->y), round(p0->x), round(p0->y),
+                   &image);
   }
+
+  // Rasterizamos el buffer
+  line_raster(&image);
+
   return 0;
 }
