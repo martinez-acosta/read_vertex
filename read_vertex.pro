@@ -5,9 +5,10 @@ CONFIG -= qt
 
 SOURCES += main.c \
     cmdline.c \
-    raster_lines.c
+    definiciones.c \
+    draw_lines.c
 
 HEADERS += \
     cmdline.h \
     definiciones.h \
-    raster_lines.h
+    draw_lines.h

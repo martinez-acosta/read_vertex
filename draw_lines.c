@@ -1,5 +1,4 @@
-#ifndef RASTER_LINES_H
-#define RASTER_LINES_H
+#include "draw_lines.h"
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -10,28 +9,10 @@
 typedef struct point {
   int x;
   int y;
-  int z;
-  int w;
 } point;
 
-typedef struct frame {
-  FILE *fp;
-  int *buffer;
-  char output[255];
-  struct point p;
-  struct point q;
-  int rows;
-  int cols;
-} frame;
-
-void swap(int *a, int *b) {
-  int tmp = *a;
-  *a = *b;
-  *b = tmp;
-}
-
-void traslate_points(int *x0, int *y0, int *x1, int *y1, const int x_offset,
-                     const int y_offset) {
+static void translate_points(int *x0, int *y0, int *x1, int *y1,
+                             const int x_offset, const int y_offset) {
   *x0 -= x_offset;
   *x1 -= x_offset;
 
@@ -39,63 +20,72 @@ void traslate_points(int *x0, int *y0, int *x1, int *y1, const int x_offset,
   *y1 -= y_offset;
 }
 
-void bresenham_line(int x0, int y0, int x1, int y1, frame *im) {
-  char octant;
-  int tmp, x_tmp, y_tmp, r, g, b, x, y, x_offset, y_offset;
+static void swap(int *a, int *b) {}
 
-  if (y0 == y1 && x0 == x1)
-    return;
+// Apuntador al framebuffer a usar
+void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
+                    const int res_x, const int res_y) {
 
-  int *data = im->buffer;
+  struct point p {
+    x0, y0
+  };
 
-  // Rasterizamos el punto inicial
+  struct point q {
+    x1, y1
+  };
+
+  // El punto p (punto inicial) debe estar más a la izquierda que
+  // el punto q.
+  if (q.x > p.x) {
+    swap(&q.x, &p.x);
+    swap(&q.y, &p.y);
+  }
+
+  // Creamos apuntador con el que procesaremos los datos
+  int *data = framebuffer;
+
+  int r, g, b;
+
+  // Asignamos color negro
   r = g = b = 0;
 
-  if (x0 >= im->cols)
-    x0 = im->cols - 1;
-
-  if (y0 >= im->rows)
-    y0 = im->rows - 1;
-
-  data[im->cols * y0 + x0] = (r << 16) | (g << 8) | b;
-
-  // Rasterizamos el punto final
-  if (x1 == im->cols)
-    x = x1 - 1;
-  else
-    x = x1;
-
-  if (y1 == im->rows)
-    y = y1 - 1;
-  else
-    y = y1;
-
-  data[im->cols * y + x] = (r << 16) | (g << 8) | b;
-
-  // línea horizontal
-  if (y0 == y1) {
-    for (x = x0; x <= x1; x++) {
-      if (x == im->cols)
-        x_tmp = im->cols - 1;
-      else
-        x_tmp = x;
-      data[im->cols * y0 + x_tmp] = (r << 16) | (g << 8) | b;
-    }
+  // Si es el mismo punto, lo dibujamos y salimos
+  if (p.y == q.y && p.x == q.x) {
     return;
   }
 
-  // línea vertical
-  if (x0 == x1) {
-    for (y = y0; y <= y1; y++) {
-      if (y == im->rows)
-        y_tmp = im->rows - 1;
-      else
-        y_tmp = y;
-      data[im->cols * y_tmp + x0] = (r << 16) | (g << 8) | b;
-    }
+  int x, y; // Valores que usaremos para hacer la interpolación
+
+  // Solo podemos dibujar puntos en el rango {0,(N-1)} donde N = {res_x,res_y}
+  // Si alguno de los puntos son iguales a res_x o res_y
+  if (q.x == res_x)
+    q.x--;
+
+  if (q.y == res_y)
+    q.y--;
+
+  // Dibujamos punto inicial y final
+  data[res_x * p.y + p.x] = (r << 16) | (g << 8) | b;
+  data[res_x * q.y + q.x] = (r << 16) | (g << 8) | b;
+
+  // Si es una línea horizontal
+  if (p.y == q.y) {
+    for (x = p.x; x <= p.x; x++)
+      data[res_x * p.y + x] = (r << 16) | (g << 8) | b;
     return;
   }
 
+  // Si es una línea vertical
+  if (p.x == q.x) {
+    for (p.y = y0; y <= q.y; y++)
+      data[res_x * y + p.x] = (r << 16) | (g << 8) | b;
+    return;
+  }
+
+  int tmp, x_offset, y_offset;
+  char octant;
+
+  //Implementamos el algoritmo Bresenham
   int dx, dy;
   dx = x1 - x0;
   dy = y1 - y0;
@@ -276,47 +266,3 @@ void bresenham_line(int x0, int y0, int x1, int y1, frame *im) {
     data[im->cols * y_tmp + x_tmp] = (r << 16) | (g << 8) | (b & 0xff);
   }
 }
-
-void line_fatal(char *str, char *error) {
-  printf("%s: %s\n", str, error);
-  exit(1);
-}
-void line_error(char *str) {
-  puts(str);
-  exit(1);
-}
-void line_raster(frame *im) {
-  int i, j, r, g, b;
-  int *data = im->buffer;
-
-  im->fp = fopen(im->output, "w");
-
-  printf("Archivo de salida: %s \n", im->output);
-  if (!im->fp)
-    line_fatal("Error from fopen in line_raster()", strerror(errno));
-  // atributos de la imagen
-
-  // Indicamos que es una imagen RGB
-  fprintf(im->fp, "P3\n");
-
-  // resolución
-  fprintf(im->fp, "%d ", im->cols);
-  fprintf(im->fp, "%d \n", im->rows);
-
-  // máximo valor de un color
-  fprintf(im->fp, "255\n");
-
-  // guardamos imagen
-  for (j = 0; j < im->rows; j++)
-    for (i = 0; i < im->cols; i++) {
-
-      r = (data[im->cols * j + i] >> 16) & 0xff;
-      g = (data[im->cols * j + i] >> 8) & 0xff;
-      b = (data[im->cols * j + i] >> 0) & 0xff;
-
-      fprintf(im->fp, "%d %d %d ", r, g, b);
-    }
-  fclose(im->fp);
-}
-
-#endif // RASTER_LINES_H
