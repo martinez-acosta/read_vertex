@@ -1,26 +1,73 @@
 #include "draw_lines.h"
-#include <errno.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 typedef struct point {
   int x;
   int y;
 } point;
 
-static void translate_points(int *x0, int *y0, int *x1, int *y1,
-                             const int x_offset, const int y_offset) {
-  *x0 -= x_offset;
-  *x1 -= x_offset;
+static void translate_to(struct point *p, struct point *q,
+                         const struct point offset);
+static octant_point to_first_octant(struct point *p, struct point *q);
 
-  *y0 -= y_offset;
-  *y1 -= y_offset;
+static void translate_to(struct point *p, struct point *q,
+                         const struct point offset) {
+  p->x -= offset.x;
+  p->y -= offset.y;
+
+  q->x -= offset.x;
+  q->y -= offset.y;
+}
+static octant_point to_first_octanct(struct point *p, struct point *q) {
+  enum octant_point octant = first_octant;
+  const struct point delta { p->x - q->x, p->y - q->y };
+  // Identificamos a qué octante pertenece el segmento de línea
+  // Cada cuadrante tiene dos octantes
+
+  // Primer cuadrante
+  if (delta.x > 0 && delta.y > 0) {
+
+    if (delta.x > delta.y)
+      octant = first_octant;
+    else
+      octant = second_octant;
+  }
+
+  // Segundo cuadrante
+  if (delta.x < 0 && delta.y > 0) {
+    if (abs(delta.y) > abs(delta.x))
+      octant = third_octant;
+    else
+      octant = four_octant;
+  }
+
+  // Tercer cuadrante
+  if (delta.x < 0 && delta.y < 0) {
+
+    if (abs(delta.x) > abs(delta.y))
+      octant = five_octant;
+    else
+      octant = six_octant;
+  }
+
+  // Cuarto cuadrante
+  if (delta.x > 0 && delta.y < 0) {
+
+    if (abs(delta.y) > abs(delta.x))
+      octant = seven_octant;
+    else
+      octant = eight_octant;
+  }
+  // Trasladamos el segmento de línea a que empiece en el origen
+  translate_to(p, q, *p);
+
+  return octant;
 }
 
-static void swap(int *a, int *b) {}
+static void swap(int *a, int *b) {
+  int tmp = *a;
+  *a = *b;
+  *b = tmp;
+}
 
 // Apuntador al framebuffer a usar
 void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
@@ -57,7 +104,7 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
   int x, y; // Valores que usaremos para hacer la interpolación
 
   // Solo podemos dibujar puntos en el rango {0,(N-1)} donde N = {res_x,res_y}
-  // Si alguno de los puntos son iguales a res_x o res_y
+  // Si el punto final, q,  es igual a res_x o res_y
   if (q.x == res_x)
     q.x--;
 
@@ -82,187 +129,64 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
     return;
   }
 
-  int tmp, x_offset, y_offset;
-  char octant;
+  // Implementamos el algoritmo Bresenham
 
-  //Implementamos el algoritmo Bresenham
-  int dx, dy;
-  dx = x1 - x0;
-  dy = y1 - y0;
-  /**************************************************/
-  // Por cada cuadrante tenemos dos opciones
-  if (dx > 0 && dy > 0) {
-    // primer cuadrante
-    if (dx > dy)
-      octant = 0;
-    else {
-      octant = 1;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
-    }
-  } else if (dx < 0 && dy > 0) {
-    // segundo cuadrante
-    if (abs(dy) > abs(dx)) {
-      octant = 2;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
+  // Trasladamos el segmento de línea a que empiece en el origen y tenga una
+  // pendiente 0 <= m <= 1
+  const enum octant_point octant = to_first_octant(p, q);
+  const struct point delta = {abs(p.x - q.x), abs(p.y - q.y)};
+  struct point tmp_point;
+  int o = 2 * (delta.y - delta.x);
+  int x, y;
+  int twoDy = 2 * delta.y;
+  int twoDyDx = 2 * (delta.y - delta.x);
+  struct point interpolated;
+  // Asignamos el punto inicial
+  tmp_point = p;
+
+  while (tmp_point.x < q.x) {
+    tmp_point.x++;
+    if (o < 0) {
+      o += twoDy;
     } else {
-      octant = 3;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
-    }
-  } else if (dx < 0 && dy < 0) {
-    // tercer cuadrante
-    if (abs(dx) > abs(dy)) {
-      octant = 4;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
-    } else {
-      octant = 5;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
-    }
-  } else if (dx > 0 && dy < 0) {
-    // cuarto cuadrante
-    if (abs(dy) > abs(dx)) {
-      octant = 6;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
-    } else {
-      octant = 7;
-      x_offset = x0;
-      y_offset = y0;
-      traslate_points(&x0, &y0, &x1, &y1, x_offset, y_offset);
-    }
-  }
-
-  switch (octant) {
-  case 0:
-    break;
-  case 1:
-    swap(&x1, &y1);
-    break;
-  case 2:
-    x1 *= -1;
-    swap(&x1, &y1);
-    break;
-  case 3:
-    y1 *= -1;
-    break;
-  case 4:
-    y1 *= -1;
-    x1 *= -1;
-    break;
-  case 5:
-    y1 *= -1;
-    x1 *= -1;
-    swap(&x1, &y1);
-    break;
-  case 6:
-    y1 *= -1;
-    swap(&x1, &y1);
-    break;
-  case 7:
-    y1 *= -1;
-    break;
-  }
-
-  // Verificamos que x0 sea menor que x1
-  if (x0 > x1) {
-    tmp = x1;
-    x1 = x0;
-    x0 = tmp;
-
-    tmp = y1;
-    y1 = y0;
-    y0 = tmp;
-  }
-
-  // Aplicamos el algoritmo
-  dx = abs(x1 - x0);
-  dy = abs(y1 - y0);
-  int p = 2 * dy - dx;
-  int twoDy = 2 * dy;
-  int twoDyDx = 2 * (dy - dx);
-  x = x0;
-  y = y0;
-
-  while (x < x1) {
-    x++;
-    if (p < 0) {
-      p += twoDy;
-    } else {
-      y++;
-      p += twoDyDx;
+      tmp_point.y++;
+      o += twoDyDx;
     }
 
-    x_tmp = x;
-    y_tmp = y;
+    interpolated = tmp_point;
 
     switch (octant) {
-    case 0:
+    case first_octant:
       break;
-    case 1:
-      swap(&x_tmp, &y_tmp);
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case second_octant: // Intercambiamos las x con las y
+      swap(&interpolated.x, &interpolated.y);
       break;
-    case 2:
-      swap(&x_tmp, &y_tmp);
-      x_tmp *= -1;
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case third_octant:
+      swap(&interpolated.x, &interpolated.y);
+      interpolated.x *= -1;
       break;
-    case 3:
-      y_tmp *= -1;
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case four_octant:
+      interpolated.y *= -1;
       break;
-    case 4:
-      x_tmp *= -1;
-      y_tmp *= -1;
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case five_octant:
+      interpolated.x *= -1;
+      interpolated.y *= -1;
       break;
-    case 5:
-      swap(&x_tmp, &y_tmp);
-      x_tmp *= -1;
-      y_tmp *= -1;
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case six_octant:
+      swap(&interpolated.x, &interpolated.y);
+      interpolated.x *= -1;
+      interpolated.y *= -1;
       break;
-    case 6:
-      swap(&x_tmp, &y_tmp);
-      y_tmp *= -1;
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case seven_octant:
+      swap(&interpolated.x, &interpolated.y);
+      interpolated.y *= -1;
       break;
-    case 7:
-      y_tmp *= -1;
-      x_tmp += x_offset;
-      y_tmp += y_offset;
+    case eight_octant:
+      interpolated.y *= -1;
       break;
     }
-
-    // guardamos el pixel en el framebuffer
-
-    if (x_tmp >= im->cols)
-      x_tmp = im->cols - 1;
-
-    if (y_tmp < 0)
-      y_tmp = 0;
-
-    if (y_tmp >= im->rows)
-      y_tmp = im->rows - 1;
-
-    if (y_tmp < 0)
-      y_tmp = 0;
-    data[im->cols * y_tmp + x_tmp] = (r << 16) | (g << 8) | (b & 0xff);
+    // Guardamos el punto en el framebuffer
+    data[res_x * interpolated.y + interpolated.x] =
+        (r << 16) | (g << 8) | (b & 0xff);
   }
 }

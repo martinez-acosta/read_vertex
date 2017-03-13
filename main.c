@@ -345,11 +345,11 @@ void print_info(struct objfile *file) {
   for (struct face *v = file->faces; v != NULL; v = v->next)
     printf("face[%d]: (%d, %d, %d)\n", i++, v->v1, v->v2, v->v3);
 }
-void rasterize(frame *im) {
+void rasterize(frame *im, char *filename) {
   int i, j, r, g, b;
   int *data = im->buffer;
 
-  im->fp = fopen(im->filename, "w");
+  im->fp = fopen(filename, "w");
 
   if (!im->fp)
     fatal("Error from fopen in line_raster()", strerror(errno));
@@ -375,6 +375,7 @@ void rasterize(frame *im) {
     }
   fclose(im->fp);
 }
+
 int main(int argc, char *argv[]) {
   struct gengetopt_args_info args_info;
   struct objfile *file;
@@ -446,7 +447,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Rasterizamos el buffer
-  rasterize(file->image);
+  rasterize(file->image, file->outputfile);
 
   return 0;
 }
