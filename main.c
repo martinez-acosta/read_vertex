@@ -138,20 +138,62 @@ void viewport_transformation(struct objfile *file, float res_x, float res_y) {
   memset(M, 0, sizeof(float) * 4 * 4);
   memset(&vector_tmp, 0, sizeof(float) * 4);
 
+  // Trasladamos a la región de interés
+  (*M)[0][0] = 1;
+  (*M)[1][1] = 1;
+  (*M)[2][2] = 1;
+  (*M)[3][3] = 1;
+  (*M)[0][3] = 960; // res_x / 2;
+  (*M)[1][3] = 540; // res_y / 2;
+
+  printf("M[3][0]:%f\n", (*M)[3][0]);
+  printf("M[3][1]:%f\n", (*M)[3][1]);
+
   // asignamos valores en la matriz
-  (*M)[0][0] = (res_x - 0) / 2.0;
-  (*M)[1][1] = (res_y - 0) / 2.0;
-  (*M)[2][2] = 1.0;
-  (*M)[0][3] = (res_x - 1.0) / 2.0;
-  (*M)[1][3] = (res_y - 1.0) / 2.0;
-  (*M)[2][3] = 1 / 2.0;
-  (*M)[3][3] = 1.0;
+  /*(*M)[0][0] = (x - 0) / 2;
+  (*M)[1][1] = (y - 0) / 2;
+  (*M)[2][2] = 1/2;
+  (*M)[0][3] = (x - 0) / 2;
+  (*M)[1][3] = (y - 0) / 2;
+  (*M)[2][3] = 1 / 2;
+  (*M)[3][3] = 1;
+*/
+  // Por cada vértice que haya
+  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+    // Asignamos vector a transformar
+    vector[0] = tmp->x;
+    vector[1] = tmp->y;
+    vector[2] = tmp->z;
+    vector[3] = tmp->w;
+
+    // Multiplicamos la matriz por el vector (Ax)
+    for (j = 0; j < 4; j++)
+      for (i = 0; i < 4; i++)
+        vector_tmp[j] += (*M)[j][i] * vector[i];
+
+    // vector_tmp[0] = (*M)[0][0] * vector[0] + (*M)[1][0] * vector[0] +
+    //             (*M)[2][0] * vector[2] + (*M)[3][0] * vector[3];
+    /*for (i = 0; i < 4; i++)
+      printf("vector[%d]: %f ", i, vector_tmp[i]);
+    printf("\n");*/
+    v++;
+    // Asignamos nuevos valores a los vértices
+    tmp->x = vector_tmp[0];
+    tmp->y = vector_tmp[1];
+    tmp->z = vector_tmp[2];
+    tmp->w = vector_tmp[3];
+
+    // limpiamos vector
+    memset(&vector_tmp, 0, sizeof(float) * 4);
+  }
+  // Escalamos
+  (*M)[0][0] = 2 / 960;
+  (*M)[1][1] = 2 / 540;
+  (*M)[2][2] = 1;
+  (*M)[3][3] = 1;
 
   // Por cada vértice que haya
-  int ff = 0;
   for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
-
-    ff++;
     // Asignamos vector a transformar
     vector[0] = tmp->x;
     vector[1] = tmp->y;
@@ -429,6 +471,9 @@ int main(int argc, char *argv[]) {
 
   // Terminadas las transformaciones, trasladamos a espacio de imagen (Viewport
   // transformation)
+  struct vector r1, r2;
+  r1 = {500,500,1,1};
+  r2 = {1000,1000,1,1};
   viewport_transformation(file, 1000, 1000);
 
   // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices
