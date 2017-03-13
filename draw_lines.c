@@ -1,4 +1,5 @@
 #include "draw_lines.h"
+#include <stdio.h>
 // Definiciones
 typedef struct point {
   int x;
@@ -176,6 +177,7 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
   if (p.x == q.x) {
     for (p.y = y0; y <= q.y; y++)
       data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
+    //getchar();
     return;
   }
 

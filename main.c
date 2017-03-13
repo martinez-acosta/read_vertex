@@ -13,6 +13,7 @@ void read_vertex(char *line, struct vector *v);
 void read_face(char *line, struct face *w);
 void normalize(struct objfile *file);
 void prepare_framebuffer(struct frame *image);
+void viewport_transformation(struct objfile *file, float res_x, float res_y);
 
 void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
@@ -428,7 +429,7 @@ int main(int argc, char *argv[]) {
 
   // Terminadas las transformaciones, trasladamos a espacio de imagen (Viewport
   // transformation)
-  viewport_transformation(file, file->image->res_x, file->image->res_y);
+  viewport_transformation(file, 1000, 1000);
 
   // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices
   // dentro del rango de la imagen
