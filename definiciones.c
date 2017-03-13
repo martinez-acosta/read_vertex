@@ -46,7 +46,7 @@ float greatest_float(const float first, const float second, const float third) {
 }
 
 struct vector *get_vector(int p, struct vector *vertexes) {
-  for (int i = 0; i < p; i++)
+  for (int i = 0; i < p - 1; i++)
     vertexes = vertexes->next;
   return vertexes;
 }

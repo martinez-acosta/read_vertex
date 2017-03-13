@@ -147,7 +147,10 @@ void viewport_transformation(struct objfile *file, float res_x, float res_y) {
   (*M)[3][3] = 1.0;
 
   // Por cada vértice que haya
+  int ff = 0;
   for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+
+    ff++;
     // Asignamos vector a transformar
     vector[0] = tmp->x;
     vector[1] = tmp->y;
@@ -155,12 +158,9 @@ void viewport_transformation(struct objfile *file, float res_x, float res_y) {
     vector[3] = tmp->w;
 
     // Multiplicamos la matriz por el vector (Ax)
-    for (j = 0; j < 4; j++) {
-      for (i = 0; i < 4; i++) {
+    for (j = 0; j < 4; j++)
+      for (i = 0; i < 4; i++)
         vector_tmp[j] += (*M)[j][i] * vector[i];
-        // printf("M[%d][%d] = %f\n", j, i, (*M)[j][i]);
-      }
-    }
 
     v++;
     // Asignamos nuevos valores a los vértices
@@ -169,8 +169,6 @@ void viewport_transformation(struct objfile *file, float res_x, float res_y) {
     tmp->z = vector_tmp[2];
     tmp->w = vector_tmp[3];
 
-    if (tmp->next == NULL)
-      break;
     // limpiamos vector
     memset(&vector_tmp, 0, sizeof(float) * 4);
   }
@@ -252,7 +250,7 @@ void read_vertex(char *line, struct vector *v) {
 }
 
 void read_face(char *line, struct face *w) {
-  char *face_1, *face_2, *face_3,*tmp;
+  char *face_1, *face_2, *face_3, *tmp;
   // Dividimos la línea en tres segmentos
   strtok(line, " ");
   face_1 = strtok(NULL, " ");
@@ -282,8 +280,8 @@ void get_vectors_and_faces(struct objfile *file) {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
-  struct vector *tmp_vertex;
-  struct face *tmp_face;
+  struct vector *tmp_vertex, *last_vertex;
+  struct face *tmp_face, *last_face;
   float tmp_smallest;
 
   // Iniciamos la lista de vectores y caras del objeto
@@ -294,8 +292,7 @@ void get_vectors_and_faces(struct objfile *file) {
     fatal("Error from malloc() in get_vectors_and_faces()", strerror(errno));
 
   // Asignamos los primeros elementos de nuestra lista enlazada file->vertexes,
-  // file->faces
-  tmp_vertex = file->vertexes;
+  file->first_vector = tmp_vertex = file->vertexes;
   tmp_face = file->faces;
 
   // Abrimos el archivo
@@ -316,6 +313,7 @@ void get_vectors_and_faces(struct objfile *file) {
       if (!tmp_vertex->next)
         fatal("Error from malloc(struct vertex) in get_info_file()",
               strerror(errno));
+      last_vertex = tmp_vertex;
       tmp_vertex = tmp_vertex->next;
     }
 
@@ -327,13 +325,16 @@ void get_vectors_and_faces(struct objfile *file) {
       if (!tmp_face->next)
         fatal("Error from malloc(struct vertex_face) in get_info_file()",
               strerror(errno));
+      last_face = tmp_face;
       tmp_face = tmp_face->next;
     }
   }
   // Indicamos fin de las listas simples
-  tmp_face->next = NULL;
-  tmp_vertex->next = NULL;
-
+  free(tmp_face);
+  free(tmp_vertex);
+  last_face->next = NULL;
+  last_vertex->next = NULL;
+  file->last_vector = last_vertex;
   // Cerrramos archivo
   fclose(fp);
 
@@ -436,7 +437,7 @@ int main(int argc, char *argv[]) {
   // Preparamos el framebuffer
   prepare_framebuffer(file->image);
 
-  struct vector *p0, *p1, *p2;
+  struct vector *p0, *p1, *p2, tmp;
 
   // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
   for (struct face *f = file->faces; f != NULL; f = f->next) {
@@ -444,6 +445,7 @@ int main(int argc, char *argv[]) {
     p0 = get_vector(f->v1, file->vertexes);
     p1 = get_vector(f->v2, file->vertexes);
     p2 = get_vector(f->v3, file->vertexes);
+
     // Dibujamos a pares los vectores
     // p0 con p1
     bresenham_line(round(p0->x), round(p0->y), round(p1->x), round(p1->y),

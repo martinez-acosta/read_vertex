@@ -42,7 +42,9 @@ typedef struct objfile {
   char outputfile[255]; // Nombre del archivo de salida
   struct face *faces;   // Conjunto de caras(polígonos) que definen el objeto
   struct vector *vertexes; // Vértices del objeto
-  float_matrix M[4][4];    // Matriz a usar
+  struct vector *first_vector;
+  struct vector *last_vector;
+  float_matrix M[4][4]; // Matriz a usar
   struct frame *image;
   struct object_coordinates obj_coordinates;
   int n_vectors; // Número de vectores que definen al objeto
