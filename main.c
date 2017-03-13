@@ -10,7 +10,7 @@
 void init(struct gengetopt_args_info *args_info, struct objfile *file);
 void get_vectors_and_faces(struct objfile *file);
 void read_vertex(char *line, struct vector *v);
-void read_face(char *line, struct vector *v);
+void read_face(char *line, struct face *w);
 void normalize(struct objfile *file);
 void prepare_framebuffer(struct frame *image);
 
@@ -20,17 +20,12 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
   if (!args_info->input_given || !args_info->output_given)
     error("Especifique un nombre de archivo");
 
-  // Limpiamos estructuras a usar
-  memset(file, 0, sizeof(struct objfile));
-  memset(file->image, 0, sizeof(struct frame));
-
   // Obtenemos...
   // Nombre de archivo de entrada
   strcpy(file->inputfile, args_info->input_arg);
 
   // Nombre de archivo de salida
-  strcpy(file->image->filename, args_info->output_arg);
-
+  strcpy(file->outputfile, args_info->output_arg);
   // Resolución de las imágenes
   char *str_tmp;
 
@@ -41,6 +36,7 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
     error("Error al obtener en resolución horizontal");
 
   file->image->res_x = strtol(str_tmp, (char **)NULL, 10);
+
   // Resolución vertical
   str_tmp = strtok(NULL, "\n\r\v\f");
 
@@ -50,7 +46,7 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
   file->image->res_y = strtol(str_tmp, (char **)NULL, 10);
 }
 
-void translate_to(struct objfile *file, struct vertex *p) {
+void translate_to(struct objfile *file, struct vector *p) {
   int i, j;
 
   float_matrix *M = file->M;
@@ -95,25 +91,23 @@ void translate_to(struct objfile *file, struct vertex *p) {
 }
 
 void normalize(struct objfile *file) {
-  // Obtenemos el valor más grande y el más chico
-  float greatest =
-      greatest_float(file.obj_coordinates.xmax, file.obj_coordinates.ymax,
-                     file.obj_coordinates.zmax);
+  struct vector *min, *max;
+  min = &file->obj_coordinates.min;
+  max = &file->obj_coordinates.max;
 
-  float smallest =
-      smallest_float(file.obj_coordinates.xmin, file.obj_coordinates.ymin,
-                     file.obj_coordinates.zmin);
+  // Obtenemos el valor más grande y el más chico
+  float greatest = greatest_float(max->x, max->y, max->z);
+  float smallest = smallest_float(min->x, min->y, min->z);
 
   float max_float;
 
   // Vemos cuál valor absoluto es mayor para normalizar el objeto
-  if (fabsf(smallest) > fabsf(greatest)) {
+  if (fabsf(smallest) > fabsf(greatest))
     max_float = fabsf(smallest);
-  } else {
+  else
     max_float = fabsf(greatest);
-  }
 
-  for (struct vertex *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
     tmp->x /= max_float;
     tmp->y /= max_float;
     tmp->z /= max_float;
@@ -131,10 +125,11 @@ void prepare_framebuffer(struct frame *image) {
   // Creamos un fondo blanco en el framebuffer
   memset(image->buffer, 255, image->res_x * image->res_y * sizeof(int));
 }
+
 void viewport_transformation(struct objfile *file, float res_x, float res_y) {
   int i, j, v = 0;
 
-  float_matrix *M = file->M;
+  float_matrix *M = &file->M;
   float vector[4];
   float vector_tmp[4];
 
@@ -152,7 +147,7 @@ void viewport_transformation(struct objfile *file, float res_x, float res_y) {
   (*M)[3][3] = 1.0;
 
   // Por cada vértice que haya
-  for (struct vertex *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
     // Asignamos vector a transformar
     vector[0] = tmp->x;
     vector[1] = tmp->y;
@@ -167,9 +162,6 @@ void viewport_transformation(struct objfile *file, float res_x, float res_y) {
       }
     }
 
-    if (vector_tmp[0] == 0) {
-      puts("xmin cero");
-    }
     v++;
     // Asignamos nuevos valores a los vértices
     tmp->x = vector_tmp[0];
@@ -201,6 +193,7 @@ void get_object_coordinates(struct objfile *file) {
   tmp = tmp->next;
 
   for (; tmp != NULL; tmp = tmp->next) {
+
     if (tmp->x < min.x)
       min.x = tmp->x;
     if (tmp->x > max.x)
@@ -220,19 +213,19 @@ void get_object_coordinates(struct objfile *file) {
       break;
   }
 
-  file->objcoordinates.min.x = min.x;
-  file->objcoordinates.min.y = min.y;
-  file->objcoordinates.min.z = min.z;
-  file->objcoordinates.min.w = min.w;
+  file->obj_coordinates.min.x = min.x;
+  file->obj_coordinates.min.y = min.y;
+  file->obj_coordinates.min.z = min.z;
+  file->obj_coordinates.min.w = min.w;
 
-  file->objcoordinates.max.x = max.x;
-  file->objcoordinates.max.y = max.y;
-  file->objcoordinates.max.z = max.z;
-  file->objcoordinates.max.w = max.w;
+  file->obj_coordinates.max.x = max.x;
+  file->obj_coordinates.max.y = max.y;
+  file->obj_coordinates.max.z = max.z;
+  file->obj_coordinates.max.w = max.w;
 }
 
-void translate_to_origin(struct vertex *vertexes, float t) {
-  for (struct vertex *tmp = vertexes; tmp != NULL; tmp = tmp->next) {
+void translate_to_origin(struct vector *vertexes, float t) {
+  for (struct vector *tmp = vertexes; tmp != NULL; tmp = tmp->next) {
     tmp->x = tmp->x + t;
     tmp->y = tmp->y + t;
     tmp->z = tmp->z + t;
@@ -259,16 +252,29 @@ void read_vertex(char *line, struct vector *v) {
 }
 
 void read_face(char *line, struct face *w) {
-  char *tmp = strtok(line, " ");
+  char *face_1, *face_2, *face_3,*tmp;
+  // Dividimos la línea en tres segmentos
+  strtok(line, " ");
+  face_1 = strtok(NULL, " ");
+  face_2 = strtok(NULL, " ");
+  face_3 = strtok(NULL, " ");
 
-  // v1
-  w->v1 = strtol(strtok(NULL, "/"), (char **)NULL, 10);
-  // v2
-  strtok(NULL, " ");
-  w->v2 = strtol(strtok(NULL, "/"), (char **)NULL, 10);
-  // v3
-  strtok(NULL, " ");
-  w->v3 = strtol(strtok(NULL, "/"), (char **)NULL, 10);
+  // Procesamos cada cara
+
+  if (strstr(face_1, "/"))
+    w->v1 = strtol(strtok(face_1, "/"), (char **)NULL, 10);
+  else
+    w->v1 = strtol(strtok(face_1, "\n\r\v\f"), (char **)NULL, 10);
+
+  if (strstr(face_2, "/"))
+    w->v2 = strtol(strtok(face_2, "/"), (char **)NULL, 10);
+  else
+    w->v2 = strtol(strtok(face_2, "\n\r\v\f"), (char **)NULL, 10);
+
+  if (strstr(face_3, "/"))
+    w->v3 = strtol(strtok(face_3, "/\n\r\v\f"), (char **)NULL, 10);
+  else
+    w->v3 = strtol(strtok(face_3, "\n\r\v\f"), (char **)NULL, 10);
 }
 
 void get_vectors_and_faces(struct objfile *file) {
@@ -339,7 +345,7 @@ void get_vectors_and_faces(struct objfile *file) {
 void print_info(struct objfile *file) {
   int i = 0;
 
-  for (struct vertex *v = file->vertexes; v != NULL; v = v->next)
+  for (struct vector *v = file->vertexes; v != NULL; v = v->next)
     printf("vertex[%d]: (%f, %f, %f, %f)\n", i++, v->x, v->y, v->z, v->w);
   i = 0;
   for (struct face *v = file->faces; v != NULL; v = v->next)
@@ -365,8 +371,8 @@ void rasterize(frame *im, char *filename) {
   fprintf(im->fp, "255\n");
 
   // guardamos imagen
-  for (j = 0; j < im->res_x; j++)
-    for (i = 0; i < im->res_y; i++) {
+  for (j = 0; j < im->res_y; j++)
+    for (i = 0; i < im->res_x; i++) {
       r = (data[im->res_x * j + i] >> 16) & 0xff;
       g = (data[im->res_x * j + i] >> 8) & 0xff;
       b = (data[im->res_x * j + i] >> 0) & 0xff;
@@ -386,15 +392,19 @@ int main(int argc, char *argv[]) {
 
   // Inicializamos estructuras
   file = malloc(sizeof(struct objfile));
-  file->image = malloc(sizeof(struct frame));
 
-  // Si es NULL alguno de los apuntadores...
-  if (!file || !file->image)
+  memset(file, 0, sizeof(struct objfile));
+
+  // Si es NULL el apuntador
+  if (!file)
     fatal("Error from malloc() in main()", strerror(errno));
 
-  // Limpiamos estructuras que han sido creadas
-  memset(file, 0, sizeof(struct objfile));
+  file->image = malloc(sizeof(struct frame));
+
   memset(file->image, 0, sizeof(struct frame));
+
+  if (!file->image)
+    fatal("Error from malloc() in main()", strerror(errno));
 
   // Obtenemos datos de entrada
   init(&args_info, file);
@@ -417,7 +427,7 @@ int main(int argc, char *argv[]) {
 
   // Terminadas las transformaciones, trasladamos a espacio de imagen (Viewport
   // transformation)
-  viewport_transformation(file);
+  viewport_transformation(file, file->image->res_x, file->image->res_y);
 
   // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices
   // dentro del rango de la imagen

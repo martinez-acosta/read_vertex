@@ -1,7 +1,7 @@
 #include "definiciones.h"
 #include <stdlib.h>
 
-static void swap(float *a, float *b) {
+void swap(float *a, float *b) {
   float tmp = *a;
   *a = *b;
   *b = tmp;
@@ -17,7 +17,7 @@ void error(char *str) {
   exit(1);
 }
 
-static float smallest_float(float first, float second, float third) {
+float smallest_float(const float first, const float second, const float third) {
   float tmp;
   if (first < second && first < third) {
     tmp = first;
@@ -31,7 +31,7 @@ static float smallest_float(float first, float second, float third) {
   return tmp;
 }
 
-static float greatest_float(float first, float second, float third) {
+float greatest_float(const float first, const float second, const float third) {
   float tmp;
   if (first > second && first > third) {
     tmp = first;
@@ -45,7 +45,7 @@ static float greatest_float(float first, float second, float third) {
   return tmp;
 }
 
-static struct vector *get_vector(int p, struct vector *vertexes) {
+struct vector *get_vector(int p, struct vector *vertexes) {
   for (int i = 0; i < p; i++)
     vertexes = vertexes->next;
   return vertexes;

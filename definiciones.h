@@ -44,17 +44,17 @@ typedef struct objfile {
   struct vector *vertexes; // Vértices del objeto
   float_matrix M[4][4];    // Matriz a usar
   struct frame *image;
-  struct object_coordinates objcoordinates;
+  struct object_coordinates obj_coordinates;
   int n_vectors; // Número de vectores que definen al objeto
   int n_faces;   // Número de caras que definen al objeto
 } objfile;
 
 // Interfaz funciones
 
-static void fatal(char *str, char *error);
-static void error(char *str);
-static void swap(float *a, float *b);
-static float smallest_float(float first, float second, float third);
-static float greatest_float(float first, float second, float third);
-static struct vector *get_vector(int p, struct vector *vertexes);
+void fatal(char *str, char *error);
+void error(char *str);
+void swap(float *a, float *b);
+float smallest_float(const float a, const float b, const float c);
+float greatest_float(const float a, const float b, const float c);
+struct vector *get_vector(int p, struct vector *vertexes);
 #endif // DEFINICIONES_H
