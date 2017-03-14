@@ -364,18 +364,20 @@ void get_vectors_and_faces(struct objfile *file) {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
-  struct vector *tmp_vertex, *last_vertex;
+  struct vector *tmp_vertex, *last_vertex, *tmp_vertexes;
   struct face *tmp_face, *last_face;
 
   // Iniciamos la lista de vectores y caras del objeto
   file->vertexes = malloc(sizeof(struct vector));
+  file->tmp_vertexes = malloc(sizeof(struct vector));
   file->faces = malloc(sizeof(struct face));
 
-  if (!file->vertexes || !file->faces)
+  if (!file->vertexes || !file->faces || !file->tmp_vertexes)
     fatal("Error from malloc() in get_vectors_and_faces()", strerror(errno));
 
   // Asignamos los primeros elementos de nuestra lista enlazada file->vertexes,
   file->first_vector = tmp_vertex = file->vertexes;
+  tmp_vertexes = file->tmp_vertexes;
   tmp_face = file->faces;
 
   // Abrimos el archivo
@@ -391,13 +393,22 @@ void get_vectors_and_faces(struct objfile *file) {
     if (*(line + 0) == 'v' && *(line + 1) == ' ') {
       read_vertex(line, tmp_vertex);
       file->n_vectors++;
-      tmp_vertex->next = malloc(sizeof(struct vector));
+      // Realizamos copia del vector
+      tmp_vertexes->x = tmp_vertex->x;
+      tmp_vertexes->y = tmp_vertex->y;
+      tmp_vertexes->z = tmp_vertex->z;
+      tmp_vertexes->w = tmp_vertex->w;
 
-      if (!tmp_vertex->next)
+      tmp_vertex->next = malloc(sizeof(struct vector));
+      tmp_vertexes->next = malloc(sizeof(struct vector));
+
+      if (!tmp_vertex->next || !tmp_vertexes->next)
         fatal("Error from malloc(struct vertex) in get_info_file()",
               strerror(errno));
+
       last_vertex = tmp_vertex;
       tmp_vertex = tmp_vertex->next;
+      tmp_vertexes = tmp_vertexes->next;
     }
 
     // Obtenemos caras
@@ -413,6 +424,7 @@ void get_vectors_and_faces(struct objfile *file) {
     }
   }
   // Indicamos fin de las listas simples
+  tmp_vertexes->next = NULL;
   free(tmp_face);
   free(tmp_vertex);
   last_face->next = NULL;

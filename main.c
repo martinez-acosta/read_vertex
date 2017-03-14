@@ -13,12 +13,24 @@ void swap_int(int *a, int *b) {
 }
 
 void generate_frame(struct objfile *file, struct vector *interpolated) {
+
+  // Realizamos copia de los vértices
+  struct vector *copy = file->tmp_vertexes;
+
+  for (struct vector *original = file->vertexes; original != NULL;
+       original = original->next, copy = copy->next) {
+    copy->x = original->x;
+    copy->y = original->y;
+    copy->z = original->z;
+    copy->w = original->w;
+  }
+
   struct screen_coordinates view;
-  view.po.x = interpolated->x + 600;
-  view.po.y = interpolated->y + 600;
+  view.po.x = interpolated->x;
+  view.po.y = interpolated->y;
   view.pf.x = view.po.x + 600;
   view.pf.y = view.po.y + 600;
-  viewport_transformation(view, file->vertexes);
+  viewport_transformation(view, file->tmp_vertexes);
 
   // Preparamos el framebuffer
   prepare_framebuffer(file->image);
@@ -28,9 +40,9 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
   // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
   for (struct face *f = file->faces; f != NULL; f = f->next) {
     // Obtenemos los vértices
-    p0 = get_vector(f->v1, file->vertexes);
-    p1 = get_vector(f->v2, file->vertexes);
-    p2 = get_vector(f->v3, file->vertexes);
+    p0 = get_vector(f->v1, file->tmp_vertexes);
+    p1 = get_vector(f->v2, file->tmp_vertexes);
+    p2 = get_vector(f->v3, file->tmp_vertexes);
 
     // Dibujamos a pares los vectores
     // p2 con p1
@@ -155,7 +167,7 @@ int main(int argc, char *argv[]) {
 
       interpolated.x = line->p.x;
 
-      for (y = line->p.y; y <= line->q.y; y++) {
+      for (y = line->p.y; y <= line->q.y; y+=5) {
         interpolated.y = y;
         generate_frame(file, &interpolated);
       }

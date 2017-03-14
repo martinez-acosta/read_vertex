@@ -58,8 +58,9 @@ typedef struct objfile {
   char outputfile[255]; // Nombre del archivo de salida
   char output_dir[255]; // Directorio de salida
   struct face *faces;   // Conjunto de caras(polígonos) que definen el objeto
-  struct vector *vertexes;    // Vértices del objeto
-  struct line_segment *lines; // Segmentos de línea a seguir
+  struct vector *vertexes;     // Vértices del objeto
+  struct vector *tmp_vertexes; // Copia temporal a usar por cada interpolación
+  struct line_segment *lines;  // Segmentos de línea a seguir
   struct vector *first_vector;
   struct vector *last_vector;
   float_matrix M[4][4]; // Matriz a usar
