@@ -13,8 +13,17 @@ void read_vertex(char *line, struct vector *v);
 void read_face(char *line, struct face *w);
 void normalize(struct objfile *file);
 void prepare_framebuffer(struct frame *image);
-void viewport_transformation(struct objfile *file, float res_x, float res_y);
-
+void get_object_coordinates(struct objfile *file);
+void viewport_transformation(struct objfile *file, struct box viewport);
+void translate_transform(struct vector translate, struct vector *vertexes);
+void scale_transform(struct vector scale, struct vector *vertexes);
+void rotation_transform_x(float beta, struct vector *vertexes);
+void rotation_transform_y(float beta, struct vector *vertexes);
+void rotation_transform_z(float beta, struct vector *vertexes);
+void reflection_transform_x(struct vector *vertexes);
+void reflection_transform_y(struct vector *vertexes);
+void reflection_transform_z(struct vector *vertexes);
+void do_matrix_multiplication(float_matrix *M, struct vector *vertexes);
 void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
   // Si no hay nombre de un archivo de entrada
@@ -45,50 +54,6 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
     error("Error al obtener resolución vertical");
 
   file->image->res_y = strtol(str_tmp, (char **)NULL, 10);
-}
-
-void translate_to(struct objfile *file, struct vector *p) {
-  int i, j;
-
-  float_matrix *M = file->M;
-  float vector[4];
-  float vector_tmp[4];
-
-  // limpiamos estructuras
-  memset(M, 0, sizeof(float) * 4 * 4);
-  memset(&vector_tmp, 0, sizeof(float) * 4);
-
-  // asignamos valores en la matriz
-  (*M)[0][0] = 1;
-  (*M)[1][1] = 1;
-  (*M)[2][2] = 1;
-  (*M)[0][3] = p->x;
-  (*M)[1][3] = p->y;
-  (*M)[2][3] = p->z;
-  (*M)[3][3] = p->w;
-
-  // Por cada vértice que haya
-  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
-    memset(&vector_tmp, 0, sizeof(float) * 4);
-    // Asignamos vector a transformar
-    vector[0] = tmp->x;
-    vector[1] = tmp->y;
-    vector[2] = tmp->z;
-    vector[3] = tmp->w;
-
-    // Multiplicamos la matriz por el vector (Ax)
-    for (j = 0; j < 4; j++) {
-      for (i = 0; i < 4; i++) {
-        vector_tmp[j] += (*M)[j][i] * vector[i];
-        // printf("M[%d][%d] = %f\n", i, j, (*M)[i][j]);
-      }
-    }
-    // Asignamos nuevos valores a los vértices
-    tmp->x = vector_tmp[0];
-    tmp->y = vector_tmp[1];
-    tmp->z = vector_tmp[2];
-    tmp->w = vector_tmp[3];
-  }
 }
 
 void normalize(struct objfile *file) {
@@ -127,94 +92,213 @@ void prepare_framebuffer(struct frame *image) {
   memset(image->buffer, 255, image->res_x * image->res_y * sizeof(int));
 }
 
-void viewport_transformation(struct objfile *file, float res_x, float res_y) {
-  int i, j, v = 0;
-
-  float_matrix *M = &file->M;
+void do_matrix_multiplication(float_matrix *M, struct vector *vertexes) {
+  int i, j;
   float vector[4];
   float vector_tmp[4];
 
-  // limpiamos estructuras
-  memset(M, 0, sizeof(float) * 4 * 4);
+  // Por cada vértice que haya
+  for (struct vector *tmp = vertexes; tmp != NULL; tmp = tmp->next) {
+    // Asignamos vector a transformar
+    vector[0] = tmp->x;
+    vector[1] = tmp->y;
+    vector[2] = tmp->z;
+    vector[3] = tmp->w;
+
+    // Multiplicamos la matriz por el vector (Ax)
+    for (j = 0; j < 4; j++)
+      for (i = 0; i < 4; i++)
+        vector_tmp[j] += (*M)[j][i] * vector[i];
+
+    // Asignamos nuevos valores a los vértices
+    tmp->x = vector_tmp[0];
+    tmp->y = vector_tmp[1];
+    tmp->z = vector_tmp[2];
+    tmp->w = vector_tmp[3];
+
+    // limpiamos vector
+    memset(&vector_tmp, 0, sizeof(float) * 4);
+  }
+}
+
+void viewport_transformation(struct objfile *file, struct box viewport) {
+  struct vector min = {file->obj_coordinates.min.x, file->obj_coordinates.min.y,
+                       file->obj_coordinates.min.z, 1, NULL};
+  struct vector max;
+
+  // Trasladamos a que empiece en el origen
+  struct vector tmp_vector = {min.x * -1, min.y * -1, min.z * -1, 1, NULL};
+  translate_transform(tmp_vector, file->vertexes);
+  // Escalamos
+  get_object_coordinates(file);
+
+  min.x = file->obj_coordinates.min.x;
+  min.y = file->obj_coordinates.min.y;
+  min.z = file->obj_coordinates.min.z;
+  min.w = 1;
+
+  max.x = file->obj_coordinates.max.x;
+  max.y = file->obj_coordinates.max.y;
+  max.z = file->obj_coordinates.max.z;
+  max.w = 1;
+
+  tmp_vector.x = (viewport.p1.x - viewport.p0.x) / (max.x - min.x);
+  tmp_vector.y = (viewport.p1.y - viewport.p0.y) / (max.y - min.y);
+  tmp_vector.z = 1;
+  tmp_vector.w = 1;
+  scale_transform(tmp_vector, file->vertexes);
+
+  // Trasladamos al viewport
+  tmp_vector.x = -1 * viewport.p0.x;
+  tmp_vector.y = -1 * viewport.p0.y;
+  tmp_vector.z = 1;
+  tmp_vector.w = 1;
+  translate_transform(tmp_vector, file->vertexes);
+}
+
+void translate_transform(struct vector translate, struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float) * 4 * 4);
   memset(&vector_tmp, 0, sizeof(float) * 4);
 
-  // Trasladamos a la región de interés
-  (*M)[0][0] = 1;
-  (*M)[1][1] = 1;
-  (*M)[2][2] = 1;
-  (*M)[3][3] = 1;
-  (*M)[0][3] = 960; // res_x / 2;
-  (*M)[1][3] = 540; // res_y / 2;
+  // Asignamos valores de matriz de traslación
+  tmp_matrix[0][0] = 1;
+  tmp_matrix[1][1] = 1;
+  tmp_matrix[2][2] = 1;
+  tmp_matrix[0][3] = translate.x;
+  tmp_matrix[1][3] = translate.y;
+  tmp_matrix[2][3] = translate.z;
+  tmp_matrix[3][3] = 1;
+  do_matrix_multiplication(&tmp_matrix, vertexes);
+}
 
-  printf("M[3][0]:%f\n", (*M)[3][0]);
-  printf("M[3][1]:%f\n", (*M)[3][1]);
+void scale_transform(struct vector scale, struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
 
-  // asignamos valores en la matriz
-  /*(*M)[0][0] = (x - 0) / 2;
-  (*M)[1][1] = (y - 0) / 2;
-  (*M)[2][2] = 1/2;
-  (*M)[0][3] = (x - 0) / 2;
-  (*M)[1][3] = (y - 0) / 2;
-  (*M)[2][3] = 1 / 2;
-  (*M)[3][3] = 1;
-*/
-  // Por cada vértice que haya
-  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
-    // Asignamos vector a transformar
-    vector[0] = tmp->x;
-    vector[1] = tmp->y;
-    vector[2] = tmp->z;
-    vector[3] = tmp->w;
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float) * 4 * 4);
+  memset(&vector_tmp, 0, sizeof(float) * 4);
 
-    // Multiplicamos la matriz por el vector (Ax)
-    for (j = 0; j < 4; j++)
-      for (i = 0; i < 4; i++)
-        vector_tmp[j] += (*M)[j][i] * vector[i];
+  // Asignamos valores de matriz de traslación
+  tmp_matrix[0][0] = scale.x;
+  tmp_matrix[1][1] = scale.y;
+  tmp_matrix[2][2] = scale.z;
+  do_matrix_multiplication(&tmp_matrix, vertexes);
+}
 
-    // vector_tmp[0] = (*M)[0][0] * vector[0] + (*M)[1][0] * vector[0] +
-    //             (*M)[2][0] * vector[2] + (*M)[3][0] * vector[3];
-    /*for (i = 0; i < 4; i++)
-      printf("vector[%d]: %f ", i, vector_tmp[i]);
-    printf("\n");*/
-    v++;
-    // Asignamos nuevos valores a los vértices
-    tmp->x = vector_tmp[0];
-    tmp->y = vector_tmp[1];
-    tmp->z = vector_tmp[2];
-    tmp->w = vector_tmp[3];
+void rotation_transform_x(float beta, struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+  int alpha = (int)beta;
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float_matrix));
+  memset(&vector_tmp, 0, sizeof(float) * 4);
 
-    // limpiamos vector
-    memset(&vector_tmp, 0, sizeof(float) * 4);
+  // Rotación alrededor de x
+  if (alpha != 0) {
+    tmp_matrix[0][0] = 1;
+    tmp_matrix[1][1] = cosf(beta);
+    tmp_matrix[1][2] = -1 * sinf(beta);
+    tmp_matrix[2][1] = sinf(beta);
+    tmp_matrix[2][2] = cosf(beta);
+    tmp_matrix[3][3] = 1;
+    do_matrix_multiplication(&tmp_matrix, vertexes);
+    memset(&tmp_matrix, 0, sizeof(float_matrix));
   }
-  // Escalamos
-  (*M)[0][0] = 2 / 960;
-  (*M)[1][1] = 2 / 540;
-  (*M)[2][2] = 1;
-  (*M)[3][3] = 1;
+}
 
-  // Por cada vértice que haya
-  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
-    // Asignamos vector a transformar
-    vector[0] = tmp->x;
-    vector[1] = tmp->y;
-    vector[2] = tmp->z;
-    vector[3] = tmp->w;
+void rotation_transform_z(float beta, struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+  int alpha = (int)beta;
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float_matrix));
+  memset(&vector_tmp, 0, sizeof(float) * 4);
 
-    // Multiplicamos la matriz por el vector (Ax)
-    for (j = 0; j < 4; j++)
-      for (i = 0; i < 4; i++)
-        vector_tmp[j] += (*M)[j][i] * vector[i];
-
-    v++;
-    // Asignamos nuevos valores a los vértices
-    tmp->x = vector_tmp[0];
-    tmp->y = vector_tmp[1];
-    tmp->z = vector_tmp[2];
-    tmp->w = vector_tmp[3];
-
-    // limpiamos vector
-    memset(&vector_tmp, 0, sizeof(float) * 4);
+  // Rotación alrededor de z
+  if (alpha != 0) {
+    tmp_matrix[0][0] = cosf(beta);
+    tmp_matrix[0][1] = -1 * sinf(beta);
+    tmp_matrix[1][0] = sinf(beta);
+    tmp_matrix[1][1] = cosf(beta);
+    tmp_matrix[2][2] = 1;
+    tmp_matrix[3][3] = 1;
+    do_matrix_multiplication(&tmp_matrix, vertexes);
+    memset(&tmp_matrix, 0, sizeof(float_matrix));
   }
+}
+
+void rotation_transform_y(float beta, struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+  int alpha = (int)beta;
+
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float_matrix));
+  memset(&vector_tmp, 0, sizeof(float) * 4);
+
+  // Rotación alrededor de y
+  if (alpha != 0) {
+    tmp_matrix[0][0] = cosf(beta);
+    tmp_matrix[0][2] = sinf(beta);
+    tmp_matrix[1][1] = 1;
+    tmp_matrix[2][0] = -1 * sinf(beta);
+    tmp_matrix[2][2] = cosf(beta);
+    tmp_matrix[3][3] = 1;
+    do_matrix_multiplication(&tmp_matrix, vertexes);
+    memset(&tmp_matrix, 0, sizeof(float_matrix));
+  }
+}
+void reflection_transform_x(struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float_matrix));
+  memset(&vector_tmp, 0, sizeof(float) * 4);
+
+  tmp_matrix[0][0] = -1;
+  tmp_matrix[1][1] = 1;
+  tmp_matrix[2][2] = 1;
+  tmp_matrix[3][3] = 1;
+
+  do_matrix_multiplication(&tmp_matrix, vertexes);
+}
+
+void reflection_transform_y(struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float_matrix));
+  memset(&vector_tmp, 0, sizeof(float) * 4);
+
+  tmp_matrix[0][0] = 1;
+  tmp_matrix[1][1] = -1;
+  tmp_matrix[2][2] = 1;
+  tmp_matrix[3][3] = 1;
+
+  do_matrix_multiplication(&tmp_matrix, vertexes);
+}
+
+void reflection_transform_z(struct vector *vertexes) {
+  float tmp_matrix[4][4];
+  float vector_tmp[4];
+
+  // Limpiamos
+  memset(&tmp_matrix, 0, sizeof(float_matrix));
+  memset(&vector_tmp, 0, sizeof(float) * 4);
+
+  tmp_matrix[0][0] = 1;
+  tmp_matrix[1][1] = 1;
+  tmp_matrix[2][2] = -1;
+  tmp_matrix[3][3] = 1;
+
+  do_matrix_multiplication(&tmp_matrix, vertexes);
 }
 
 void get_object_coordinates(struct objfile *file) {
@@ -265,13 +349,6 @@ void get_object_coordinates(struct objfile *file) {
   file->obj_coordinates.max.w = max.w;
 }
 
-void translate_to_origin(struct vector *vertexes, float t) {
-  for (struct vector *tmp = vertexes; tmp != NULL; tmp = tmp->next) {
-    tmp->x = tmp->x + t;
-    tmp->y = tmp->y + t;
-    tmp->z = tmp->z + t;
-  }
-}
 void read_vertex(char *line, struct vector *v) {
   char *tmp;
 
@@ -293,7 +370,7 @@ void read_vertex(char *line, struct vector *v) {
 }
 
 void read_face(char *line, struct face *w) {
-  char *face_1, *face_2, *face_3, *tmp;
+  char *face_1, *face_2, *face_3;
   // Dividimos la línea en tres segmentos
   strtok(line, " ");
   face_1 = strtok(NULL, " ");
@@ -325,7 +402,6 @@ void get_vectors_and_faces(struct objfile *file) {
   ssize_t read;
   struct vector *tmp_vertex, *last_vertex;
   struct face *tmp_face, *last_face;
-  float tmp_smallest;
 
   // Iniciamos la lista de vectores y caras del objeto
   file->vertexes = malloc(sizeof(struct vector));
@@ -468,14 +544,42 @@ int main(int argc, char *argv[]) {
 
   // Realizamos todas las transformaciones que queramos:
   // rotación, traslación,escalamiento; todas acotadas en el cubo unitario
+  float t = 1000;
+  struct vector min;
 
-  // Terminadas las transformaciones, trasladamos a espacio de imagen (Viewport
+  rotation_transform_x(0, file->vertexes);
+  rotation_transform_y(0, file->vertexes);
+  rotation_transform_z(0, file->vertexes);
+  get_object_coordinates(file);
+
+  // Trasladamos a que empiece en los ejes positivos
+  min.x = file->obj_coordinates.min.x * -1;
+  min.y = file->obj_coordinates.min.y * -1;
+  min.z = file->obj_coordinates.min.z * -1;
+  min.w = file->obj_coordinates.min.w;
+  translate_transform(min, file->vertexes);
+  get_object_coordinates(file);
+
+  // translate_transform((struct vector){960, 960, 0, 1, NULL},
+  // file->vertexes);
+  scale_transform((struct vector){t, t, t, 1, NULL}, file->vertexes);
+
+  // Terminadas las transformaciones, trasladamos a espacio de imagen
+  // (Viewport
   // transformation)
-  struct vector r1, r2;
-  r1 = {500,500,1,1};
-  r2 = {1000,1000,1,1};
-  viewport_transformation(file, 1000, 1000);
+  /*struct box viewport;
 
+  viewport.p0.x = 500;
+  viewport.p0.y = 500;
+  viewport.p0.z = 1;
+  viewport.p0.w = 1;
+
+  viewport.p0.x = 1000;
+  viewport.p0.y = 1000;
+  viewport.p0.z = 1;
+  viewport.p0.w = 1;
+  viewport_transformation(file, viewport);
+*/
   // Recalculamos las nuevas coordenadas de objeto; debe haber solo vértices
   // dentro del rango de la imagen
   get_object_coordinates(file);
@@ -483,7 +587,7 @@ int main(int argc, char *argv[]) {
   // Preparamos el framebuffer
   prepare_framebuffer(file->image);
 
-  struct vector *p0, *p1, *p2, tmp;
+  struct vector *p0, *p1, *p2;
 
   // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
   for (struct face *f = file->faces; f != NULL; f = f->next) {
@@ -494,12 +598,14 @@ int main(int argc, char *argv[]) {
 
     // Dibujamos a pares los vectores
     // p0 con p1
+    if(round(p0->x) == round(p1->x) || round(p0->y) == round(p1->y))
+        getchar();
     bresenham_line(round(p0->x), round(p0->y), round(p1->x), round(p1->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
     // p1 con p2
     bresenham_line(round(p1->x), round(p1->y), round(p2->x), round(p2->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
-    // p2 con p0
+    // p2 con p3
     bresenham_line(round(p2->x), round(p2->y), round(p0->x), round(p0->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
   }

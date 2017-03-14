@@ -30,6 +30,11 @@ typedef struct object_coordinates {
   struct vector max;
 } object_coordinates;
 
+typedef struct box {
+  struct vector p0; // Punto inicial
+  struct vector p1; // Punto final
+} box;
+
 typedef struct frame {
   FILE *fp;    //  Apuntador al archivo de salida
   int *buffer; //  Framebuffer a trabajar

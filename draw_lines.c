@@ -162,22 +162,28 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
   if (q.y == res_y)
     q.y--;
 
-  // Dibujamos punto inicial y final
-  data[res_x * p.y + p.x] = (r << 16) | (g << 8) | b;
-  data[res_x * q.y + q.x] = (r << 16) | (g << 8) | b;
+  if (p.x < res_x && q.x < res_x && p.x >= 0 && q.x >= 0 && p.y < res_y &&
+      q.y < res_y && p.y >= 0 && q.y >= 0) {
+    // Dibujamos punto inicial y final
+    data[res_x * p.y + p.x] = (r << 16) | (g << 8) | b;
+    data[res_x * q.y + q.x] = (r << 16) | (g << 8) | b;
+  }
 
   // Si es una línea horizontal
   if (p.y == q.y) {
-    for (x = p.x; x <= p.x; x++)
-      data[res_x * p.y + x] = (r << 16) | (g << 8) | b;
+    if (p.y < res_y && q.y < res_y && p.y >= 0 && q.y >= 0)
+      for (x = p.x; x <= p.x; x++)
+        if (x >= 0 && x < res_x)
+          data[res_x * p.y + x] = (r << 16) | (g << 8) | b;
     return;
   }
 
   // Si es una línea vertical
   if (p.x == q.x) {
-    for (p.y = y0; y <= q.y; y++)
-      data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
-    //getchar();
+    if (p.x < res_x && q.x < res_x && p.x >= 0 && q.x >= 0)
+      for (p.y = y0; y <= q.y; y++)
+        if (y > 0 && y <= res_y)
+          data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
     return;
   }
 
@@ -241,7 +247,9 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
     translate_one_point(&interpolated,
                         (struct point){offset.x * -1, offset.y * -1});
     // Guardamos el punto en el framebuffer
-    data[res_x * interpolated.y + interpolated.x] =
-        (r << 16) | (g << 8) | (b & 0xff);
+    if (interpolated.x < res_x && interpolated.y < res_y &&
+        interpolated.x >= 0 && interpolated.y >= 0)
+      data[res_x * interpolated.y + interpolated.x] =
+          (r << 16) | (g << 8) | (b & 0xff);
   }
 }
