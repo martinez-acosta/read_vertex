@@ -129,7 +129,7 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
 
   // El punto p (punto inicial) debe estar más a la izquierda que
   // el punto q.
-  if (q.x > p.x) {
+  if (q.x < p.x) {
     swap(&q.x, &p.x);
     swap(&q.y, &p.y);
   }
@@ -171,17 +171,16 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
 
   // Si es una línea horizontal
   if (p.y == q.y) {
-    if (p.y < res_y && q.y < res_y && p.y >= 0 && q.y >= 0)
-      for (x = p.x; x <= p.x; x++)
-        if (x >= 0 && x < res_x)
-          data[res_x * p.y + x] = (r << 16) | (g << 8) | b;
+    for (x = p.x; x <= q.x; x++)
+      if (x >= 0 && x < res_x && p.y < res_y && p.y >= 0)
+        data[res_x * p.y + x] = (r << 16) | (g << 8) | b;
     return;
   }
 
   // Si es una línea vertical
   if (p.x == q.x) {
-    if (p.x < res_x && q.x < res_x && p.x >= 0 && q.x >= 0)
-      for (p.y = y0; y <= q.y; y++)
+    if (p.x < res_x && p.x >= 0)
+      for (y = p.y; y <= q.y; y++)
         if (y > 0 && y <= res_y)
           data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
     return;
@@ -251,5 +250,20 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
         interpolated.x >= 0 && interpolated.y >= 0)
       data[res_x * interpolated.y + interpolated.x] =
           (r << 16) | (g << 8) | (b & 0xff);
+  }
+}
+void explicit_line(int x0, int y0, int x1, int y1, int *framebuffer, int res_x,
+                   int res_y) {
+  float m = ((float)y1 - y0) / (x1 - x0);
+  int r, g, b;
+  int y;
+  float k;
+  int *data = framebuffer;
+  r = g = b = 0;
+  k = y0 - m * x0;
+  for (int x = x0; x <= x1; x++) {
+    y = m * x + k;
+    if (x < res_x && y < res_y && x >= 0 && y >= 0)
+      data[res_x * y + x] = (r << 16) | (g << 8) | (b & 0xff);
   }
 }

@@ -544,25 +544,25 @@ int main(int argc, char *argv[]) {
 
   // Realizamos todas las transformaciones que queramos:
   // rotación, traslación,escalamiento; todas acotadas en el cubo unitario
-  float t = 1000;
-  struct vector min;
-
+  // M_PI = pi
   rotation_transform_x(0, file->vertexes);
   rotation_transform_y(0, file->vertexes);
   rotation_transform_z(0, file->vertexes);
-  get_object_coordinates(file);
 
+  reflection_transform_x(file->vertexes);
+
+  float t = 1000;
+  struct vector min;
   // Trasladamos a que empiece en los ejes positivos
   min.x = file->obj_coordinates.min.x * -1;
   min.y = file->obj_coordinates.min.y * -1;
   min.z = file->obj_coordinates.min.z * -1;
   min.w = file->obj_coordinates.min.w;
   translate_transform(min, file->vertexes);
+  scale_transform((struct vector){t, t, t, 1, NULL}, file->vertexes);
   get_object_coordinates(file);
-
   // translate_transform((struct vector){960, 960, 0, 1, NULL},
   // file->vertexes);
-  scale_transform((struct vector){t, t, t, 1, NULL}, file->vertexes);
 
   // Terminadas las transformaciones, trasladamos a espacio de imagen
   // (Viewport
@@ -597,15 +597,13 @@ int main(int argc, char *argv[]) {
     p2 = get_vector(f->v3, file->vertexes);
 
     // Dibujamos a pares los vectores
-    // p0 con p1
-    if(round(p0->x) == round(p1->x) || round(p0->y) == round(p1->y))
-        getchar();
-    bresenham_line(round(p0->x), round(p0->y), round(p1->x), round(p1->y),
+    // p2 con p1
+    bresenham_line(round(p2->x), round(p2->y), round(p1->x), round(p1->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
-    // p1 con p2
-    bresenham_line(round(p1->x), round(p1->y), round(p2->x), round(p2->y),
+    // p1 con p0
+    bresenham_line(round(p1->x), round(p1->y), round(p0->x), round(p0->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
-    // p2 con p3
+    // p2 con p0
     bresenham_line(round(p2->x), round(p2->y), round(p0->x), round(p0->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
   }
