@@ -254,19 +254,9 @@ void rotation_transform_y(float beta, struct vector *vertexes) {
   }
 }
 void reflection_transform_x(struct vector *vertexes) {
-  float tmp_matrix[4][4];
-  float vector_tmp[4];
-
-  // Limpiamos
-  memset(&tmp_matrix, 0, sizeof(float_matrix));
-  memset(&vector_tmp, 0, sizeof(float) * 4);
-
-  tmp_matrix[0][0] = -1;
-  tmp_matrix[1][1] = 1;
-  tmp_matrix[2][2] = 1;
-  tmp_matrix[3][3] = 1;
-
-  do_matrix_multiplication(&tmp_matrix, vertexes);
+  for (struct vector *tmp = vertexes; tmp != NULL; tmp = tmp->next) {
+    tmp->x *= -1;
+  }
 }
 
 void reflection_transform_y(struct vector *vertexes) {
@@ -547,11 +537,11 @@ int main(int argc, char *argv[]) {
   // M_PI = pi
   rotation_transform_x(0, file->vertexes);
   rotation_transform_y(0, file->vertexes);
-  rotation_transform_z(0, file->vertexes);
+  rotation_transform_z(5 * M_PI / 3, file->vertexes);
 
   reflection_transform_x(file->vertexes);
 
-  float t = 1000;
+  float t = 500;
   struct vector min;
   // Trasladamos a que empiece en los ejes positivos
   min.x = file->obj_coordinates.min.x * -1;
@@ -560,9 +550,9 @@ int main(int argc, char *argv[]) {
   min.w = file->obj_coordinates.min.w;
   translate_transform(min, file->vertexes);
   scale_transform((struct vector){t, t, t, 1, NULL}, file->vertexes);
+  translate_transform((struct vector){960, 960, 1, 1, NULL}, file->vertexes);
   get_object_coordinates(file);
-  // translate_transform((struct vector){960, 960, 0, 1, NULL},
-  // file->vertexes);
+
 
   // Terminadas las transformaciones, trasladamos a espacio de imagen
   // (Viewport
@@ -607,7 +597,13 @@ int main(int argc, char *argv[]) {
     bresenham_line(round(p2->x), round(p2->y), round(p0->x), round(p0->y),
                    file->image->buffer, file->image->res_x, file->image->res_y);
   }
-
+  /*struct vector k0, k1;
+  k0.x = 500;
+  k0.y = 500;
+  k1.x = k0.x +0;
+  k1.y = k0.y - 300;
+  bresenham_line(k0.x, k0.y, k1.x, k1.y, file->image->buffer,
+                 file->image->res_x, file->image->res_y);*/
   // Rasterizamos el buffer
   rasterize(file->image, file->outputfile);
 

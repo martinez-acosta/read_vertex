@@ -179,10 +179,11 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
 
   // Si es una línea vertical
   if (p.x == q.x) {
-    if (p.x < res_x && p.x >= 0)
-      for (y = p.y; y <= q.y; y++)
-        if (y > 0 && y <= res_y)
-          data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
+    if (p.y > q.y)
+      swap(&p.y, &q.y);
+    for (y = p.y; y <= q.y; y++)
+      if (y > 0 && y <= res_y && q.x < res_x && q.x >= 0)
+        data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
     return;
   }
 
