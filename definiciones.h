@@ -30,10 +30,10 @@ typedef struct object_coordinates {
   struct vector max;
 } object_coordinates;
 
-typedef struct box {
-  struct vector p0; // Punto inicial
-  struct vector p1; // Punto final
-} box;
+typedef struct screen_coordinates {
+  struct vector po; // Punto inicial
+  struct vector pf; // Punto final
+} screen_coordinates;
 
 typedef struct frame {
   FILE *fp;    //  Apuntador al archivo de salida
@@ -64,4 +64,24 @@ void swap(float *a, float *b);
 float smallest_float(const float a, const float b, const float c);
 float greatest_float(const float a, const float b, const float c);
 struct vector *get_vector(int p, struct vector *vertexes);
+void init(struct gengetopt_args_info *args_info, struct objfile *file);
+void get_vectors_and_faces(struct objfile *file);
+void read_vertex(char *line, struct vector *v);
+void read_face(char *line, struct face *w);
+void normalize(struct objfile *file);
+void prepare_framebuffer(struct frame *image);
+void get_object_coordinates(struct objfile *file);
+void viewport_transformation(struct screen_coordinates viewport,
+                             struct vector *vertexes);
+void translate_transform(struct vector translate, struct vector *vertexes);
+void scale_transform(struct vector scale, struct vector *vertexes);
+void rotation_transform_x(float beta, struct vector *vertexes);
+void rotation_transform_y(float beta, struct vector *vertexes);
+void rotation_transform_z(float beta, struct vector *vertexes);
+void reflection_transform_x(struct vector *vertexes);
+void reflection_transform_y(struct vector *vertexes);
+void reflection_transform_z(struct vector *vertexes);
+void rasterize(frame *im, char *filename);
+void do_matrix_multiplication(float_matrix *M, struct vector *vertexes);
+
 #endif // DEFINICIONES_H
