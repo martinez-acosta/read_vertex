@@ -21,12 +21,12 @@ extern "C" {
 
 #ifndef CMDLINE_PARSER_PACKAGE
 /** @brief the program name (used for printing errors) */
-#define CMDLINE_PARSER_PACKAGE "read_vertex_t"
+#define CMDLINE_PARSER_PACKAGE "practica_01_t"
 #endif
 
 #ifndef CMDLINE_PARSER_PACKAGE_NAME
 /** @brief the complete program name (used for help and version) */
-#define CMDLINE_PARSER_PACKAGE_NAME "read_vertex_t"
+#define CMDLINE_PARSER_PACKAGE_NAME "practica_01_t"
 #endif
 
 #ifndef CMDLINE_PARSER_VERSION
@@ -45,6 +45,18 @@ struct gengetopt_args_info
   char * output_arg;	/**< @brief archivo de salida.  */
   char * output_orig;	/**< @brief archivo de salida original value given at command line.  */
   const char *output_help; /**< @brief archivo de salida help description.  */
+  char * output_dir_arg;	/**< @brief directorio de salida.  */
+  char * output_dir_orig;	/**< @brief directorio de salida original value given at command line.  */
+  const char *output_dir_help; /**< @brief directorio de salida help description.  */
+  char * line_arg;	/**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal).  */
+  char * line_orig;	/**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal) original value given at command line.  */
+  const char *line_help; /**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal) help description.  */
+  char * rotate_arg;	/**< @brief Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1.  */
+  char * rotate_orig;	/**< @brief Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1 original value given at command line.  */
+  const char *rotate_help; /**< @brief Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1 help description.  */
+  char * scale_arg;	/**< @brief Escalar la figura: s0,s1.  */
+  char * scale_orig;	/**< @brief Escalar la figura: s0,s1 original value given at command line.  */
+  const char *scale_help; /**< @brief Escalar la figura: s0,s1 help description.  */
   char * resolution_arg;	/**< @brief resolución de la imagen en la forma <x,y>.  */
   char * resolution_orig;	/**< @brief resolución de la imagen en la forma <x,y> original value given at command line.  */
   const char *resolution_help; /**< @brief resolución de la imagen en la forma <x,y> help description.  */
@@ -53,6 +65,10 @@ struct gengetopt_args_info
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int input_given ;	/**< @brief Whether input was given.  */
   unsigned int output_given ;	/**< @brief Whether output was given.  */
+  unsigned int output_dir_given ;	/**< @brief Whether output_dir was given.  */
+  unsigned int line_given ;	/**< @brief Whether line was given.  */
+  unsigned int rotate_given ;	/**< @brief Whether rotate was given.  */
+  unsigned int scale_given ;	/**< @brief Whether scale was given.  */
   unsigned int resolution_given ;	/**< @brief Whether resolution was given.  */
 
 } ;

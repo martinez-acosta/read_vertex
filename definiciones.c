@@ -19,6 +19,7 @@ void error(char *str) {
   puts(str);
   exit(1);
 }
+float degree_to_rad(float degree) { return (degree * M_PI) / 180.0; }
 
 float smallest_float(const float first, const float second, const float third) {
   float tmp;
@@ -425,6 +426,44 @@ void get_vectors_and_faces(struct objfile *file) {
     free(line);
 }
 
+void get_lines(struct objfile *file, char *input_lines) {
+  file->lines = malloc(sizeof(struct line_segment));
+
+  if (!file->lines)
+    fatal("Error from get_lines()", strerror(errno));
+
+  // Limpiamos estructura
+  memset(file->lines, 0, sizeof(line_segment));
+
+  char *tmp, buf[20];
+  char a, b, c;
+  struct line_segment *tmp_line = file->lines;
+  memset(&buf, 0, sizeof(buf));
+  // Si solo hay un segmento de línea
+  if (!strstr(input_lines, "/")) {
+    sscanf(input_lines, "%d%c%d%c%d%c%d", &tmp_line->p.x, &a, &tmp_line->p.y,
+           &b, &tmp_line->q.x, &c, &tmp_line->q.y);
+  } else {
+
+    tmp = strtok(input_lines, "/");
+    // Asignamos dirección inicial de la lista
+    tmp_line = file->lines;
+    // Obtenemos segmentos de línea, trabajaremos con la copia local buf
+    while (tmp != NULL) {
+      sscanf(tmp, "%d%c%d%c%d%c%d", &tmp_line->p.x, &a, &tmp_line->p.y, &b,
+             &tmp_line->q.x, &c, &tmp_line->q.y);
+      // Alojamos memoria
+      tmp_line->next = malloc(sizeof(struct line_segment));
+
+      if (!tmp_line->next)
+        fatal("error from malloc()", strerror(errno));
+
+      tmp_line = tmp_line->next;
+      tmp = strtok(NULL, "/\0");
+    }
+  }
+}
+
 void print_info(struct objfile *file) {
   int i = 0;
 
@@ -435,7 +474,8 @@ void print_info(struct objfile *file) {
     printf("face[%d]: (%d, %d, %d)\n", i++, v->v1, v->v2, v->v3);
 }
 
-void rasterize(frame *im, char *filename) {
+void rasterize(frame *im, char *filename, char *output_dir) {
+  char outfile[255];
   int i, j, r, g, b;
   int *data = im->buffer;
 

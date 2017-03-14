@@ -6,6 +6,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+void swap_int(int *a, int *b) {
+  int tmp = *a;
+  *a = *b;
+  *b = tmp;
+}
+
+void generate_frame(struct objfile *file, struct vector *interpolated) {
+  struct screen_coordinates view;
+  view.po.x = interpolated->x + 600;
+  view.po.y = interpolated->y + 600;
+  view.pf.x = view.po.x + 600;
+  view.pf.y = view.po.y + 600;
+  viewport_transformation(view, file->vertexes);
+
+  // Preparamos el framebuffer
+  prepare_framebuffer(file->image);
+
+  struct vector *p0, *p1, *p2;
+
+  // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
+  for (struct face *f = file->faces; f != NULL; f = f->next) {
+    // Obtenemos los vértices
+    p0 = get_vector(f->v1, file->vertexes);
+    p1 = get_vector(f->v2, file->vertexes);
+    p2 = get_vector(f->v3, file->vertexes);
+
+    // Dibujamos a pares los vectores
+    // p2 con p1
+    bresenham_line(round(p2->x), round(p2->y), round(p1->x), round(p1->y),
+                   file->image->buffer, file->image->res_x, file->image->res_y);
+    // p1 con p0
+    bresenham_line(round(p1->x), round(p1->y), round(p0->x), round(p0->y),
+                   file->image->buffer, file->image->res_x, file->image->res_y);
+    // p2 con p0
+    bresenham_line(round(p2->x), round(p2->y), round(p0->x), round(p0->y),
+                   file->image->buffer, file->image->res_x, file->image->res_y);
+  }
+  // Generamos nuevo nombre de salida
+  memset(file->outputfile, 0, 255);
+  sprintf(file->outputfile, "%04d", file->n_img++);
+  strcat(file->outputfile, ".ppm");
+  // Rasterizamos el buffer
+  rasterize(file->image, file->outputfile, file->output_dir);
+}
 
 void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
@@ -19,6 +63,11 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
   // Nombre de archivo de salida
   strcpy(file->outputfile, args_info->output_arg);
+
+  // Directorio de salida
+  if (args_info->output_dir_given)
+    strcpy(file->output_dir, args_info->output_dir_arg);
+
   // Resolución de las imágenes
   char *str_tmp;
 
@@ -37,10 +86,13 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
     error("Error al obtener resolución vertical");
 
   file->image->res_y = strtol(str_tmp, (char **)NULL, 10);
+  // Obtenemos segmentos de líneas
+  if (args_info->line_given)
+    get_lines(file, args_info->line_arg);
 }
 
 void prepare_framebuffer(struct frame *image) {
-  // Reservamos la memoria que usaremos
+  // Reservamos la memoria que usaremosoutputfile
   image->buffer = malloc(image->res_x * image->res_y * sizeof(int));
 
   if (!image->buffer)
@@ -85,46 +137,29 @@ int main(int argc, char *argv[]) {
   normalize(file);
 
   // Rotamos en grados
-  // M_PI = pi
   rotation_transform_x(M_PI, file->vertexes);
-  rotation_transform_y(3*M_PI / 2, file->vertexes);
+  rotation_transform_y(0, file->vertexes);
   rotation_transform_z(0, file->vertexes);
 
-  // Trasladamos a las coordenadas de imagen que queremos (Viewport
-  // transformation)
-  struct screen_coordinates view;
-  view.po.x = 700;
-  view.po.y = 800;
-  view.pf.x = view.po.x + 600;
-  view.pf.y = view.po.y + 600;
-  viewport_transformation(view, file->vertexes);
+  struct vector interpolated;
+  int x, y;
+  // Por cada segmento de línea
+  for (struct line_segment *line = file->lines; line != NULL;
+       line = line->next) {
 
-  // Preparamos el framebuffer
-  prepare_framebuffer(file->image);
+    // Si es una línea vertical
+    if (line->p.x == line->q.x) {
 
-  struct vector *p0, *p1, *p2;
+      if (line->p.y > line->q.y)
+        swap_int(&line->p.y, &line->q.y);
 
-  // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
-  for (struct face *f = file->faces; f != NULL; f = f->next) {
-    // Obtenemos los vértices
-    p0 = get_vector(f->v1, file->vertexes);
-    p1 = get_vector(f->v2, file->vertexes);
-    p2 = get_vector(f->v3, file->vertexes);
+      interpolated.x = line->p.x;
 
-    // Dibujamos a pares los vectores
-    // p2 con p1
-    bresenham_line(round(p2->x), round(p2->y), round(p1->x), round(p1->y),
-                   file->image->buffer, file->image->res_x, file->image->res_y);
-    // p1 con p0
-    bresenham_line(round(p1->x), round(p1->y), round(p0->x), round(p0->y),
-                   file->image->buffer, file->image->res_x, file->image->res_y);
-    // p2 con p0
-    bresenham_line(round(p2->x), round(p2->y), round(p0->x), round(p0->y),
-                   file->image->buffer, file->image->res_x, file->image->res_y);
+      for (y = line->p.y; y <= line->q.y; y++) {
+        interpolated.y = y;
+        generate_frame(file, &interpolated);
+      }
+    }
   }
-
-  // Rasterizamos el buffer
-  rasterize(file->image, file->outputfile);
-
   return 0;
 }

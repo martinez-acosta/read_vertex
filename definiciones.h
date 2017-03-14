@@ -15,6 +15,17 @@ typedef struct vector {
   struct vector *next; // Apuntador al siguiente elemento
 } vector;
 
+typedef struct point_screen {
+  int x; // Coordenada x
+  int y; // Coordenada y
+} point_screen;
+
+typedef struct line_segment {
+  struct point_screen p;     // Punto incial
+  struct point_screen q;     // Punto incial
+  struct line_segment *next; // Apuntador al siguiente elemento
+  char t_true;
+} line_segment;
 // Polígino definido por tres enteros que indican su posición en la lista donde
 // se guardan todos los vectores que definen el objeto
 
@@ -45,8 +56,10 @@ typedef struct frame {
 typedef struct objfile {
   char inputfile[255];  //  Nombre del archivo de entrada
   char outputfile[255]; // Nombre del archivo de salida
+  char output_dir[255]; // Directorio de salida
   struct face *faces;   // Conjunto de caras(polígonos) que definen el objeto
-  struct vector *vertexes; // Vértices del objeto
+  struct vector *vertexes;    // Vértices del objeto
+  struct line_segment *lines; // Segmentos de línea a seguir
   struct vector *first_vector;
   struct vector *last_vector;
   float_matrix M[4][4]; // Matriz a usar
@@ -54,6 +67,7 @@ typedef struct objfile {
   struct object_coordinates obj_coordinates;
   int n_vectors; // Número de vectores que definen al objeto
   int n_faces;   // Número de caras que definen al objeto
+  int n_img;     // Secuencia de salida para los nombres de imagen
 } objfile;
 
 // Interfaz funciones
@@ -63,9 +77,11 @@ void error(char *str);
 void swap(float *a, float *b);
 float smallest_float(const float a, const float b, const float c);
 float greatest_float(const float a, const float b, const float c);
+float degree_to_rad(float);
 struct vector *get_vector(int p, struct vector *vertexes);
 void init(struct gengetopt_args_info *args_info, struct objfile *file);
 void get_vectors_and_faces(struct objfile *file);
+void get_lines(struct objfile *file, char *input_lines);
 void read_vertex(char *line, struct vector *v);
 void read_face(char *line, struct face *w);
 void normalize(struct objfile *file);
@@ -81,7 +97,7 @@ void rotation_transform_z(float beta, struct vector *vertexes);
 void reflection_transform_x(struct vector *vertexes);
 void reflection_transform_y(struct vector *vertexes);
 void reflection_transform_z(struct vector *vertexes);
-void rasterize(frame *im, char *filename);
+void rasterize(frame *im, char *filename, char *output_dir);
 void do_matrix_multiplication(float_matrix *M, struct vector *vertexes);
 
 #endif // DEFINICIONES_H
