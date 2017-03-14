@@ -3,6 +3,7 @@
 #include "draw_lines.h"
 #include <errno.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,6 +64,181 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
   rasterize(file->image, file->outputfile, file->output_dir);
 }
 
+static void translate_to(struct point *p, struct point *q,
+                         const struct point offset) {
+  p->x -= offset.x;
+  p->y -= offset.y;
+
+  q->x -= offset.x;
+  q->y -= offset.y;
+}
+static void translate_one_point(struct point *p, const struct point offset);
+static void translate_one_point(struct point *p, const struct point offset) {
+  p->x -= offset.x;
+  p->y -= offset.y;
+}
+
+static enum octant_point to_first_octant(struct point *p, struct point *q) {
+  enum octant_point octant = first_octant;
+  const struct point delta = {q->x - p->x, q->y - p->y};
+  // Identificamos a qué octante pertenece el segmento de línea
+  // Cada cuadrante tiene dos octantes
+
+  // Primer cuadrante
+  if (delta.x > 0 && delta.y > 0) {
+
+    if (delta.x > delta.y)
+      octant = first_octant;
+    else
+      octant = second_octant;
+  }
+
+  // Segundo cuadrante
+  if (delta.x < 0 && delta.y > 0) {
+    if (abs(delta.y) > abs(delta.x))
+      octant = third_octant;
+    else
+      octant = four_octant;
+  }
+
+  // Tercer cuadrante
+  if (delta.x < 0 && delta.y < 0) {
+
+    if (abs(delta.x) > abs(delta.y))
+      octant = five_octant;
+    else
+      octant = six_octant;
+  }
+
+  // Cuarto cuadrante
+  if (delta.x > 0 && delta.y < 0) {
+
+    if (abs(delta.y) > abs(delta.x))
+      octant = seven_octant;
+    else
+      octant = eight_octant;
+  }
+  // Trasladamos el segmento de línea a que empiece en el origen
+  translate_to(p, q, *p);
+  // El vector p está en la posición (0,0,0,1)
+  // Rotamos el segmento de línea al primer octante
+  switch (octant) {
+  case first_octant:
+
+    break;
+  case second_octant:
+    swap_int(&q->x, &q->y);
+    break;
+  case third_octant:
+    q->x *= -1;
+    swap_int(&q->x, &q->y);
+    break;
+  case four_octant:
+    q->y *= -1;
+    break;
+  case five_octant:
+    q->y *= -1;
+    q->x *= -1;
+    break;
+  case six_octant:
+    q->y *= -1;
+    q->x *= -1;
+    swap_int(&q->x, &q->y);
+    break;
+  case seven_octant:
+    q->y *= -1;
+    swap_int(&q->x, &q->y);
+    break;
+  case eight_octant:
+    break;
+  }
+  return octant;
+}
+
+void bresenham_interpolated(struct objfile *file, struct line_segment *line) {
+
+  struct point p = {line->p.x, line->p.y};
+
+  struct point q = {line->q.x, line->q.y};
+  struct vector interpolated_vector;
+  // El punto p (punto inicial) debe estar más a la izquierda que
+  // el punto q.
+  if (q.x < p.x) {
+    swap_int(&q.x, &p.x);
+    swap_int(&q.y, &p.y);
+  }
+
+  int x, y; // Valores que usaremos para hacer la interpolación
+
+  // Implementamos el algoritmo Bresenham
+
+  // Trasladamos el segmento de línea a que empiece en el origen y tenga una
+  // pendiente 0 <= m <= 1
+  const struct point offset = p;
+  const enum octant_point octant = to_first_octant(&p, &q);
+  const struct point delta = {abs(q.x - p.x), abs(q.y - p.y)};
+  struct point tmp_point;
+  int o = 2 * (delta.y - delta.x);
+  int twoDy = 2 * delta.y;
+  int twoDyDx = 2 * (delta.y - delta.x);
+  struct point interpolated;
+  // Asignamos el punto inicial
+  tmp_point = p;
+
+  while (tmp_point.x < q.x) {
+    tmp_point.x += 5;
+    if (o < 0) {
+      o += twoDy;
+    } else {
+      tmp_point.y += 5;
+      o += twoDyDx;
+    }
+
+    interpolated = tmp_point;
+
+    switch (octant) {
+    case first_octant:
+      break;
+    case second_octant: // Intercambiamos las x con las y
+      swap_int(&interpolated.x, &interpolated.y);
+      break;
+    case third_octant:
+      swap_int(&interpolated.x, &interpolated.y);
+      interpolated.x *= -1;
+      break;
+    case four_octant:
+      interpolated.y *= -1;
+      break;
+    case five_octant:
+      interpolated.x *= -1;
+      interpolated.y *= -1;
+      break;
+    case six_octant:
+      swap_int(&interpolated.x, &interpolated.y);
+      interpolated.x *= -1;
+      interpolated.y *= -1;
+      break;
+    case seven_octant:
+      swap_int(&interpolated.x, &interpolated.y);
+      interpolated.y *= -1;
+      break;
+    case eight_octant:
+      interpolated.y *= -1;
+      break;
+    }
+    // Trasladamos el punto a sus coordenadas en la imagen
+    translate_one_point(&interpolated,
+                        (struct point){offset.x * -1, offset.y * -1});
+    // Guardamos el punto en el framebuffer
+    if (interpolated.x < file->image->res_x &&
+        interpolated.y < file->image->res_y && interpolated.x >= 0 &&
+        interpolated.y >= 0) {
+      interpolated_vector.x = interpolated.x;
+      interpolated_vector.y = interpolated.y;
+      generate_frame(file, &interpolated_vector);
+    }
+  }
+}
 void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
   // Si no hay nombre de un archivo de entrada
@@ -167,10 +343,23 @@ int main(int argc, char *argv[]) {
 
       interpolated.x = line->p.x;
 
-      for (y = line->p.y; y <= line->q.y; y+=5) {
+      for (y = line->p.y; y <= line->q.y; y += 5) {
         interpolated.y = y;
         generate_frame(file, &interpolated);
       }
+    } else if (line->p.y == line->q.y) { // Si es una línea horizontal
+
+      if (line->p.x > line->q.x)
+        swap_int(&line->p.x, &line->q.x);
+
+      interpolated.x = line->p.x;
+
+      for (x = line->p.x; y <= line->q.x; y += 5) {
+        interpolated.x = y;
+        generate_frame(file, &interpolated);
+      }
+    } else {
+      bresenham_interpolated(file, line);
     }
   }
   return 0;

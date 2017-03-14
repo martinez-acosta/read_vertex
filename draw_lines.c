@@ -20,6 +20,7 @@ enum octant_point {
 static void translate_to(struct point *p, struct point *q,
                          const struct point offset);
 static enum octant_point to_first_octant(struct point *p, struct point *q);
+static void translate_one_point(struct point *p, const struct point offset);
 static void swap(int *a, int *b);
 
 // Implementaciones
@@ -31,7 +32,7 @@ static void translate_to(struct point *p, struct point *q,
   q->x -= offset.x;
   q->y -= offset.y;
 }
-static void translate_one_point(struct point *p, const struct point offset);
+
 static void translate_one_point(struct point *p, const struct point offset) {
   p->x -= offset.x;
   p->y -= offset.y;

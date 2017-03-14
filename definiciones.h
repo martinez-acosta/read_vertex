@@ -71,6 +71,27 @@ typedef struct objfile {
   int n_img;     // Secuencia de salida para los nombres de imagen
 } objfile;
 
+typedef struct point {
+  int x;
+  int y;
+} point;
+
+enum octant_point {
+  first_octant = 0,
+  second_octant = 1,
+  third_octant = 2,
+  four_octant = 3,
+  five_octant = 4,
+  six_octant = 5,
+  seven_octant = 6,
+  eight_octant = 7
+};
+// Prototipos
+static void translate_to(struct point *p, struct point *q,
+                         const struct point offset);
+static enum octant_point to_first_octant(struct point *p, struct point *q);
+static void translate_one_point(struct point *p, const struct point offset);
+
 // Interfaz funciones
 
 void fatal(char *str, char *error);
