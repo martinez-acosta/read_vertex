@@ -182,7 +182,7 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
     if (p.y > q.y)
       swap(&p.y, &q.y);
     for (y = p.y; y <= q.y; y++)
-      if (y > 0 && y <= res_y && q.x < res_x && q.x >= 0)
+      if (y >= 0 && y < res_y && q.x < res_x && q.x >= 0)
         data[res_x * y + q.x] = (r << 16) | (g << 8) | b;
     return;
   }

@@ -1,10 +1,12 @@
-purpose "Lee vértices"
-usage "read_vertex_t [OPTION...]"
-description "Lee vértices de un archivo obj"
-package "read_vertex_t"
+purpose "Crear n imágenes de un archivo obj"
+usage "practica_01 [OPTION...]"
+description "Crea n imágenes para una animación; por defecto se crea una imagen con una altura y ancho de 500 pixeles centrado en la imagen a menos que se provean parámetros para seguir un segmento de línea"
+package "practica_01_t"
 version "0.1"
 
 #Options
 option "input" i "archivo a leer" string required
 option "output" o "archivo de salida" string required
+option "line" l "segmentos de líneas a seguir en la forma x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal)" string optional
+option "rotate" r "Solo puede rotar respecto al eje x o eje y; " string optional
 option "resolution" - "resolución de la imagen en la forma <x,y>" string required

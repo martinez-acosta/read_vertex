@@ -84,32 +84,19 @@ int main(int argc, char *argv[]) {
   // Normalizamos el objeto al espacio acotado por el cubo unitario
   normalize(file);
 
-  // Rotamos
+  // Rotamos en grados
   // M_PI = pi
-  rotation_transform_x(0, file->vertexes);
-  rotation_transform_y(0, file->vertexes);
+  rotation_transform_x(M_PI, file->vertexes);
+  rotation_transform_y(3*M_PI / 2, file->vertexes);
   rotation_transform_z(0, file->vertexes);
-  /*
-    struct vector min;
-    // Trasladamos a que empiece en los ejes positivos
-    get_object_coordinates(file);
-    min.x = file->obj_coordinates.min.x * -1;
-    min.y = file->obj_coordinates.min.y * -1;
-    min.z = file->obj_coordinates.min.z * -1;
-    min.w = file->obj_coordinates.min.w;
-    translate_transform(min, file->vertexes);
-    // Escalamos
-    float t = 500;
-    //scale_transform((struct vector){t, t, t, 1, NULL}, file->vertexes);
-    //translate_transform((struct vector){1000, 1000, 1, 1, NULL},
-    file->vertexes);
-  */
-  // Trasladamos a las coordenadas de imagen que queremos (Viewport transformation)
+
+  // Trasladamos a las coordenadas de imagen que queremos (Viewport
+  // transformation)
   struct screen_coordinates view;
-  view.po.x = 500;
-  view.po.y = 500;
-  view.pf.x = 1000;
-  view.pf.y = 1000;
+  view.po.x = 700;
+  view.po.y = 800;
+  view.pf.x = view.po.x + 600;
+  view.pf.y = view.po.y + 600;
   viewport_transformation(view, file->vertexes);
 
   // Preparamos el framebuffer
