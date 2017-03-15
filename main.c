@@ -29,10 +29,10 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
   if (file->rotar) {
     normalize_tmp(file);
     get_object_coordinates_tmp(file);
-    file->alpha += 0.1;
+    file->alpha += M_PI/9;
     rotation_transform_z(file->alpha, file->tmp_vertexes);
-    normalize_tmp(file);
     rotation_transform_y(file->alpha, file->tmp_vertexes);
+    rotation_transform_x(file->alpha, file->tmp_vertexes);
     normalize_tmp(file);
   }
   struct screen_coordinates view;

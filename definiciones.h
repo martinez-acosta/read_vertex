@@ -70,7 +70,7 @@ typedef struct objfile {
   int n_vectors; // Número de vectores que definen al objeto
   int n_faces;   // Número de caras que definen al objeto
   int n_img;     // Secuencia de salida para los nombres de imagen
-  float alpha;   //ángulo a rotar en z
+  double alpha;  //ángulo a rotar en z
   bool rotar;
 } objfile;
 
