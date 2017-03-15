@@ -17,6 +17,7 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
 
   // Realizamos copia de los vértices
   struct vector *copy = file->tmp_vertexes;
+  struct vector min;
 
   for (struct vector *original = file->vertexes; original != NULL;
        original = original->next, copy = copy->next) {
@@ -28,12 +29,18 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
 
   if (file->rotar) {
     normalize_tmp(file);
-    get_object_coordinates_tmp(file);
-    file->alpha += M_PI/9;
-    rotation_transform_z(file->alpha, file->tmp_vertexes);
+    min.x = file->obj_coordinates_tmp.max.x * -1;
+    min.y = file->obj_coordinates_tmp.max.y * -1;
+    min.z = file->obj_coordinates_tmp.max.z * -1;
+    min.w = file->obj_coordinates.max.w;
+    translate_transform(min, file->tmp_vertexes);
+
+    file->alpha += M_PI / 12;
+    // rotation_transform_x(M_PI, file->tmp_vertexes);
     rotation_transform_y(file->alpha, file->tmp_vertexes);
-    rotation_transform_x(file->alpha, file->tmp_vertexes);
     normalize_tmp(file);
+    // rotation_transform_z(file->alpha, file->tmp_vertexes);
+    // rotation_transform_x(file->alpha, file->tmp_vertexes);
   }
   struct screen_coordinates view;
   view.po.x = interpolated->x;

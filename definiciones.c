@@ -144,10 +144,10 @@ void viewport_transformation(struct screen_coordinates view,
   // Asignamos valores de matriz de traslación
   tmp_matrix[0][0] = (view.pf.x - view.po.x) / 2;
   tmp_matrix[1][1] = (view.pf.y - view.po.y) / 2;
-  tmp_matrix[2][2] = 1 / 2;
+  tmp_matrix[2][2] = 1/2;
   tmp_matrix[0][3] = (view.pf.x + view.po.x) / 2;
   tmp_matrix[1][3] = (view.pf.y + view.po.y) / 2;
-  tmp_matrix[2][3] = 1 / 2;
+  tmp_matrix[2][3] = 1/2;
   tmp_matrix[3][3] = 1;
 
   do_matrix_multiplication(&tmp_matrix, vertexes);
