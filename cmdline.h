@@ -51,9 +51,7 @@ struct gengetopt_args_info
   char * line_arg;	/**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal).  */
   char * line_orig;	/**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal) original value given at command line.  */
   const char *line_help; /**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal) help description.  */
-  char * rotate_arg;	/**< @brief Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1.  */
-  char * rotate_orig;	/**< @brief Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1 original value given at command line.  */
-  const char *rotate_help; /**< @brief Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1 help description.  */
+  const char *rotate_help; /**< @brief Si rota help description.  */
   char * scale_arg;	/**< @brief Escalar la figura: s0,s1.  */
   char * scale_orig;	/**< @brief Escalar la figura: s0,s1 original value given at command line.  */
   const char *scale_help; /**< @brief Escalar la figura: s0,s1 help description.  */

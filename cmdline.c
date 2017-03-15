@@ -40,7 +40,7 @@ const char *gengetopt_args_info_help[] = {
   "  -o, --output=STRING      archivo de salida",
   "  -d, --output_dir=STRING  directorio de salida",
   "  -l, --line=STRING        segmentos de líneas a seguir:\n                             x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de\n                             línea deben ir separados por una diagonal)",
-  "  -r, --rotate=STRING      Solo puede rotar respecto al eje x,y(en grados)\n                             alrededor de un segmento de cada línea:\n                             alpha0,beta0/alpha1,beta1",
+  "  -r, --rotate             Si rota",
   "  -s, --scale=STRING       Escalar la figura: s0,s1",
   "      --resolution=STRING  resolución de la imagen en la forma <x,y>",
     0
@@ -91,8 +91,6 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->output_dir_orig = NULL;
   args_info->line_arg = NULL;
   args_info->line_orig = NULL;
-  args_info->rotate_arg = NULL;
-  args_info->rotate_orig = NULL;
   args_info->scale_arg = NULL;
   args_info->scale_orig = NULL;
   args_info->resolution_arg = NULL;
@@ -205,8 +203,6 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->output_dir_orig));
   free_string_field (&(args_info->line_arg));
   free_string_field (&(args_info->line_orig));
-  free_string_field (&(args_info->rotate_arg));
-  free_string_field (&(args_info->rotate_orig));
   free_string_field (&(args_info->scale_arg));
   free_string_field (&(args_info->scale_orig));
   free_string_field (&(args_info->resolution_arg));
@@ -254,7 +250,7 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
   if (args_info->line_given)
     write_into_file(outfile, "line", args_info->line_orig, 0);
   if (args_info->rotate_given)
-    write_into_file(outfile, "rotate", args_info->rotate_orig, 0);
+    write_into_file(outfile, "rotate", 0, 0 );
   if (args_info->scale_given)
     write_into_file(outfile, "scale", args_info->scale_orig, 0);
   if (args_info->resolution_given)
@@ -541,13 +537,13 @@ cmdline_parser_internal (
         { "output",	1, NULL, 'o' },
         { "output_dir",	1, NULL, 'd' },
         { "line",	1, NULL, 'l' },
-        { "rotate",	1, NULL, 'r' },
+        { "rotate",	0, NULL, 'r' },
         { "scale",	1, NULL, 's' },
         { "resolution",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVi:o:d:l:r:s:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVi:o:d:l:rs:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -611,12 +607,12 @@ cmdline_parser_internal (
             goto failure;
         
           break;
-        case 'r':	/* Solo puede rotar respecto al eje x,y(en grados) alrededor de un segmento de cada línea: alpha0,beta0/alpha1,beta1.  */
+        case 'r':	/* Si rota.  */
         
         
-          if (update_arg( (void *)&(args_info->rotate_arg), 
-               &(args_info->rotate_orig), &(args_info->rotate_given),
-              &(local_args_info.rotate_given), optarg, 0, 0, ARG_STRING,
+          if (update_arg( 0 , 
+               0 , &(args_info->rotate_given),
+              &(local_args_info.rotate_given), optarg, 0, 0, ARG_NO,
               check_ambiguity, override, 0, 0,
               "rotate", 'r',
               additional_error))

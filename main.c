@@ -26,6 +26,15 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
     copy->w = original->w;
   }
 
+  if (file->rotar) {
+    normalize_tmp(file);
+    get_object_coordinates_tmp(file);
+    file->alpha += 0.1;
+    rotation_transform_z(file->alpha, file->tmp_vertexes);
+    normalize_tmp(file);
+    rotation_transform_y(file->alpha, file->tmp_vertexes);
+    normalize_tmp(file);
+  }
   struct screen_coordinates view;
   view.po.x = interpolated->x;
   view.po.y = interpolated->y;
@@ -262,6 +271,9 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
   // Resolución horizontal
   str_tmp = strtok(args_info->resolution_arg, ",");
 
+  // Rotación inicial
+  if (args_info->rotate_given)
+    file->rotar = true;
   if (!str_tmp)
     error("Error al obtener en resolución horizontal");
 

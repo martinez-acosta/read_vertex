@@ -54,7 +54,30 @@ struct vector *get_vector(int p, struct vector *vertexes) {
     vertexes = vertexes->next;
   return vertexes;
 }
+void normalize_tmp(struct objfile *file) {
+  get_object_coordinates_tmp(file);
+  struct vector *min, *max;
+  min = &file->obj_coordinates_tmp.min;
+  max = &file->obj_coordinates_tmp.max;
 
+  // Obtenemos el valor más grande y el más chico
+  float greatest = greatest_float(max->x, max->y, max->z);
+  float smallest = smallest_float(min->x, min->y, min->z);
+
+  float max_float;
+
+  // Vemos cuál valor absoluto es mayor para normalizar el objeto
+  if (fabsf(smallest) > fabsf(greatest))
+    max_float = fabsf(smallest);
+  else
+    max_float = fabsf(greatest);
+
+  for (struct vector *tmp = file->tmp_vertexes; tmp != NULL; tmp = tmp->next) {
+    tmp->x /= max_float;
+    tmp->y /= max_float;
+    tmp->z /= max_float;
+  }
+}
 void normalize(struct objfile *file) {
   get_object_coordinates(file);
   struct vector *min, *max;
@@ -263,6 +286,54 @@ void reflection_transform_z(struct vector *vertexes) {
   tmp_matrix[3][3] = 1;
 
   do_matrix_multiplication(&tmp_matrix, vertexes);
+}
+
+void get_object_coordinates_tmp(struct objfile *file) {
+  struct vector min;
+  struct vector max;
+
+  struct vector *tmp = file->tmp_vertexes;
+
+  // Asignamos valores iniciales
+  min.x = max.x = tmp->x;
+  min.y = max.y = tmp->y;
+  min.z = max.z = tmp->z;
+  min.w = max.w = tmp->w;
+
+  // Recorremos todos los vectores que definen al objeto buscando la 4-tupla
+  // mayor y menor
+  tmp = tmp->next;
+
+  for (; tmp != NULL; tmp = tmp->next) {
+
+    if (tmp->x < min.x)
+      min.x = tmp->x;
+    if (tmp->x > max.x)
+      max.x = tmp->x;
+
+    if (tmp->y < min.y)
+      min.y = tmp->y;
+    if (tmp->y > max.y)
+      max.y = tmp->y;
+
+    if (tmp->z < min.z)
+      min.z = tmp->z;
+    if (tmp->z > max.z)
+      max.z = tmp->z;
+
+    if (!tmp->next)
+      break;
+  }
+
+  file->obj_coordinates_tmp.min.x = min.x;
+  file->obj_coordinates_tmp.min.y = min.y;
+  file->obj_coordinates_tmp.min.z = min.z;
+  file->obj_coordinates_tmp.min.w = min.w;
+
+  file->obj_coordinates_tmp.max.x = max.x;
+  file->obj_coordinates_tmp.max.y = max.y;
+  file->obj_coordinates_tmp.max.z = max.z;
+  file->obj_coordinates_tmp.max.w = max.w;
 }
 
 void get_object_coordinates(struct objfile *file) {

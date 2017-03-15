@@ -1,7 +1,7 @@
 #ifndef DEFINICIONES_H
 #define DEFINICIONES_H
+#include <stdbool.h>
 #include <stdio.h>
-
 // Matriz a usar para las transformaciones
 typedef float float_matrix[4][4];
 
@@ -66,9 +66,12 @@ typedef struct objfile {
   float_matrix M[4][4]; // Matriz a usar
   struct frame *image;
   struct object_coordinates obj_coordinates;
+  struct object_coordinates obj_coordinates_tmp;
   int n_vectors; // Número de vectores que definen al objeto
   int n_faces;   // Número de caras que definen al objeto
   int n_img;     // Secuencia de salida para los nombres de imagen
+  float alpha;   //ángulo a rotar en z
+  bool rotar;
 } objfile;
 
 typedef struct point {
@@ -107,8 +110,10 @@ void get_lines(struct objfile *file, char *input_lines);
 void read_vertex(char *line, struct vector *v);
 void read_face(char *line, struct face *w);
 void normalize(struct objfile *file);
+void normalize_tmp(struct objfile *file);
 void prepare_framebuffer(struct frame *image);
 void get_object_coordinates(struct objfile *file);
+void get_object_coordinates_tmp(struct objfile *file);
 void viewport_transformation(struct screen_coordinates viewport,
                              struct vector *vertexes);
 void translate_transform(struct vector translate, struct vector *vertexes);
