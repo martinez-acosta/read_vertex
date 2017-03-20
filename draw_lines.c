@@ -110,6 +110,7 @@ static enum octant_point to_first_octant(struct point *p, struct point *q) {
     swap(&q->x, &q->y);
     break;
   case eight_octant:
+      q->y *= -1;
     break;
   }
   return octant;
