@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+float toRad(float angle){
+    return angle * (M_PI/180.0);
+}
+
 void swap(float *a, float *b) {
   float tmp = *a;
   *a = *b;
@@ -78,28 +82,14 @@ void normalize_tmp(struct objfile *file) {
     tmp->z /= max_float;
   }
 }
-void normalize(struct objfile *file) {
-  get_object_coordinates(file);
-  struct vector *min, *max;
-  min = &file->obj_coordinates.min;
-  max = &file->obj_coordinates.max;
 
-  // Obtenemos el valor más grande y el más chico
-  float greatest = greatest_float(max->x, max->y, max->z);
-  float smallest = smallest_float(min->x, min->y, min->z);
-
-  float max_float;
-
-  // Vemos cuál valor absoluto es mayor para normalizar el objeto
-  if (fabsf(smallest) > fabsf(greatest))
-    max_float = fabsf(smallest);
-  else
-    max_float = fabsf(greatest);
-
-  for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
-    tmp->x /= max_float;
-    tmp->y /= max_float;
-    tmp->z /= max_float;
+void normalize2(struct vector *vertexes) {
+  float s;
+  for (struct vector *tmp = vertexes; tmp != NULL; tmp = tmp->next) {
+    s = sqrtf(tmp->x * tmp->x + tmp->y * tmp->y + tmp->z * tmp->z);
+    tmp->x /= s;
+    tmp->y /= s;
+    tmp->z /= s;
   }
 }
 
@@ -144,10 +134,10 @@ void viewport_transformation(struct screen_coordinates view,
   // Asignamos valores de matriz de traslación
   tmp_matrix[0][0] = (view.pf.x - view.po.x) / 2;
   tmp_matrix[1][1] = (view.pf.y - view.po.y) / 2;
-  tmp_matrix[2][2] = 1/2;
+  tmp_matrix[2][2] = 1 / 2;
   tmp_matrix[0][3] = (view.pf.x + view.po.x) / 2;
   tmp_matrix[1][3] = (view.pf.y + view.po.y) / 2;
-  tmp_matrix[2][3] = 1/2;
+  tmp_matrix[2][3] = 1 / 2;
   tmp_matrix[3][3] = 1;
 
   do_matrix_multiplication(&tmp_matrix, vertexes);
@@ -190,18 +180,20 @@ void scale_transform(struct vector scale, struct vector *vertexes) {
 void rotation_transform_x(float beta, struct vector *vertexes) {
   float tmp_matrix[4][4];
   float vector_tmp[4];
-  int alpha = (int)beta;
+  float angle;
   // Limpiamos
   memset(&tmp_matrix, 0, sizeof(float_matrix));
   memset(&vector_tmp, 0, sizeof(float) * 4);
 
+ angle = toRad(beta);
+  //Convertimos a pi radianes
   // Rotación alrededor de x
-  if (alpha != 0) {
+  if ( (int)angle != 0) {
     tmp_matrix[0][0] = 1;
-    tmp_matrix[1][1] = cosf(beta);
-    tmp_matrix[1][2] = -1 * sinf(beta);
-    tmp_matrix[2][1] = sinf(beta);
-    tmp_matrix[2][2] = cosf(beta);
+    tmp_matrix[1][1] = cosf(angle);
+    tmp_matrix[1][2] = -1 * sinf(angle);
+    tmp_matrix[2][1] = sinf(angle);
+    tmp_matrix[2][2] = cosf(angle);
     tmp_matrix[3][3] = 1;
     do_matrix_multiplication(&tmp_matrix, vertexes);
     memset(&tmp_matrix, 0, sizeof(float_matrix));
@@ -233,18 +225,19 @@ void rotation_transform_y(float beta, struct vector *vertexes) {
   float tmp_matrix[4][4];
   float vector_tmp[4];
   int alpha = (int)beta;
+  float angle;
 
   // Limpiamos
   memset(&tmp_matrix, 0, sizeof(float_matrix));
   memset(&vector_tmp, 0, sizeof(float) * 4);
-
+ angle = toRad(beta);
   // Rotación alrededor de y
   if (alpha != 0) {
-    tmp_matrix[0][0] = cosf(beta);
-    tmp_matrix[0][2] = sinf(beta);
+    tmp_matrix[0][0] = cosf(angle);
+    tmp_matrix[0][2] = sinf(angle);
     tmp_matrix[1][1] = 1;
-    tmp_matrix[2][0] = -1 * sinf(beta);
-    tmp_matrix[2][2] = cosf(beta);
+    tmp_matrix[2][0] = -1 * sinf(angle);
+    tmp_matrix[2][2] = cosf(angle);
     tmp_matrix[3][3] = 1;
     do_matrix_multiplication(&tmp_matrix, vertexes);
     memset(&tmp_matrix, 0, sizeof(float_matrix));
@@ -545,6 +538,45 @@ void get_lines(struct objfile *file, char *input_lines) {
       tmp = strtok(NULL, "/\0");
     }
   }
+}
+
+void get_bezier(struct objfile *file, char *input_bezier) {
+  file->bezier = malloc(sizeof(struct bezier_curve));
+
+  if (!file->bezier)
+    fatal("Error from get_lines()", strerror(errno));
+
+  // Limpiamos estructura
+  memset(file->bezier, 0, sizeof(struct bezier_curve));
+
+  char *tmp, buf[20];
+  char a;
+  memset(&buf, 0, sizeof(buf));
+  // Si solo hay un segmento de línea
+  struct bezier_curve *curve = file->bezier;
+  if (!strstr(input_bezier, "/")) {
+    sscanf(input_bezier, "%d%c%d%c%d%c%d%c%d%c%d%c%d%c%d", &curve->p1.x, &a,
+           &curve->p1.y, &a, &curve->p2.x, &a, &curve->p2.y, &a, &curve->p3.x,
+           &a, &curve->p3.y, &a, &curve->p4.x, &a, &curve->p4.y);
+  } /*else {
+
+    tmp = strtok(input_bezier, "/");
+    // Asignamos dirección inicial de la lista
+    tmp_line = file->lines;
+    // Obtenemos segmentos de línea, trabajaremos con la copia local buf
+    while (tmp != NULL) {
+      sscanf(tmp, "%d%c%d%c%d%c%d", &tmp_line->p.x, &a, &tmp_line->p.y, &b,
+             &tmp_line->q.x, &c, &tmp_line->q.y);
+      // Alojamos memoria
+      tmp_line->next = malloc(sizeof(struct line_segment));
+
+      if (!tmp_line->next)
+        fatal("error from malloc()", strerror(errno));
+
+      tmp_line = tmp_line->next;
+      tmp = strtok(NULL, "/\0");
+    }
+  }*/
 }
 
 void print_info(struct objfile *file) {

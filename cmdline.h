@@ -58,6 +58,9 @@ struct gengetopt_args_info
   char * resolution_arg;	/**< @brief resolución de la imagen en la forma <x,y>.  */
   char * resolution_orig;	/**< @brief resolución de la imagen en la forma <x,y> original value given at command line.  */
   const char *resolution_help; /**< @brief resolución de la imagen en la forma <x,y> help description.  */
+  char * bezier_arg;	/**< @brief curva de bézier a seguir en la forma p1,p2,p3,p4.  */
+  char * bezier_orig;	/**< @brief curva de bézier a seguir en la forma p1,p2,p3,p4 original value given at command line.  */
+  const char *bezier_help; /**< @brief curva de bézier a seguir en la forma p1,p2,p3,p4 help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
@@ -68,6 +71,7 @@ struct gengetopt_args_info
   unsigned int rotate_given ;	/**< @brief Whether rotate was given.  */
   unsigned int scale_given ;	/**< @brief Whether scale was given.  */
   unsigned int resolution_given ;	/**< @brief Whether resolution was given.  */
+  unsigned int bezier_given ;	/**< @brief Whether bezier was given.  */
 
 } ;
 

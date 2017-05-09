@@ -26,6 +26,15 @@ typedef struct line_segment {
   struct line_segment *next; // Apuntador al siguiente elemento
   char t_true;
 } line_segment;
+
+// Los cuatro puntos mínimos de la curva de bézier
+typedef struct bezier_curve {
+  struct point_screen p1;
+  struct point_screen p2;
+  struct point_screen p3;
+  struct point_screen p4;
+} bezier_curve;
+
 // Polígino definido por tres enteros que indican su posición en la lista donde
 // se guardan todos los vectores que definen el objeto
 
@@ -61,6 +70,7 @@ typedef struct objfile {
   struct vector *vertexes;     // Vértices del objeto
   struct vector *tmp_vertexes; // Copia temporal a usar por cada interpolación
   struct line_segment *lines;  // Segmentos de línea a seguir
+  struct bezier_curve *bezier;
   struct vector *first_vector;
   struct vector *last_vector;
   float_matrix M[4][4]; // Matriz a usar
@@ -107,9 +117,11 @@ struct vector *get_vector(int p, struct vector *vertexes);
 void init(struct gengetopt_args_info *args_info, struct objfile *file);
 void get_vectors_and_faces(struct objfile *file);
 void get_lines(struct objfile *file, char *input_lines);
+void get_bezier(struct objfile *file, char *input_lines);
 void read_vertex(char *line, struct vector *v);
 void read_face(char *line, struct face *w);
 void normalize(struct objfile *file);
+void normalize2(struct vector *vertexes);
 void normalize_tmp(struct objfile *file);
 void prepare_framebuffer(struct frame *image);
 void get_object_coordinates(struct objfile *file);
@@ -121,6 +133,7 @@ void scale_transform(struct vector scale, struct vector *vertexes);
 void rotation_transform_x(float beta, struct vector *vertexes);
 void rotation_transform_y(float beta, struct vector *vertexes);
 void rotation_transform_z(float beta, struct vector *vertexes);
+float toRad(float angle);
 void reflection_transform_x(struct vector *vertexes);
 void reflection_transform_y(struct vector *vertexes);
 void reflection_transform_z(struct vector *vertexes);

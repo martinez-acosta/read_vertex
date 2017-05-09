@@ -110,7 +110,7 @@ static enum octant_point to_first_octant(struct point *p, struct point *q) {
     swap(&q->x, &q->y);
     break;
   case eight_octant:
-      q->y *= -1;
+    q->y *= -1;
     break;
   }
   return octant;
@@ -129,6 +129,10 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
 
   struct point q = {x1, y1};
 
+  if (p.x < 0 && q.x < 0
+          || p.y < 0 && q.y < 0
+          || p.x < 0 && q.x < 0 && p.y < 0 && q.y < 0)
+    return;
   // El punto p (punto inicial) debe estar más a la izquierda que
   // el punto q.
   if (q.x < p.x) {
