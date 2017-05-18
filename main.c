@@ -7,12 +7,56 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+char isInImage(int x, int y, int res_x, int res_y) {
+  if (x > 0 && x < res_x && y > 0 && y < res_y)
+    return 1;
+  return 0;
+}
 void swap_int(int *a, int *b) {
   int tmp = *a;
   *a = *b;
   *b = tmp;
 }
 
+int min_int(int a, int b, int c) {
+  if (a < b && a < c)
+    return a;
+  else if (b < a && b < c)
+    return b;
+  else if (c < a && c < b)
+    return c;
+}
+
+int max_int(int a, int b, int c) {
+  if (a > b && a > c)
+    return a;
+  else if (b > a && b > c)
+    return b;
+  else if (c > a && c > b)
+    return c;
+}
+
+float min_float(float a, float b, float c) {
+  if (a < b && a < c)
+    return a;
+  else if (b < a && b < c)
+    return b;
+  else if (c < a && c < b)
+    return c;
+}
+
+float max_float(float a, float b, float c) {
+  if (a > b && a > c)
+    return a;
+  else if (b > a && b > c)
+    return b;
+  else if (c > a && c > b)
+    return c;
+}
+float areaTriangle(struct vector *v1, struct vector *v2, struct vector *v3) {
+  return (v3->x - v1->x) * (v2->y - v1->y) - (v3->y - v1->y) * (v2->x - v1->x);
+}
 void generate_frame(struct objfile *file, struct vector *interpolated) {
 
   // Realizamos copia de los vértices
@@ -38,7 +82,7 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
     file->alpha += M_PI / 12;
     // rotation_transform_x(M_PI, file->tmp_vertexes);
     rotation_transform_y(file->alpha, file->tmp_vertexes);
-    rotation_transform_z(file->alpha, file->tmp_vertexes);
+    //rotation_transform_z(file->alpha, file->tmp_vertexes);
     // rotation_transform_x(file->alpha, file->tmp_vertexes);
     normalize_tmp(file);
   }
@@ -86,38 +130,21 @@ void generate_frame2(struct objfile *file, struct vector *interpolated) {
 
   if (file->rotar) {
     file->alpha += M_PI / 12;
-    // rotation_transform_x(M_PI, file->tmp_vertexes);
     rotation_transform_x(file->alpha, file->vertexes);
     rotation_transform_y(file->alpha, file->vertexes);
-    // rotation_transform_z(file->alpha, file->tmp_vertexes);
-    // rotation_transform_x(file->alpha, file->tmp_vertexes);
-    // normalize_tmp(file);
   }
 
   // Preparamos el framebuffer
   prepare_framebuffer(file->image);
 
   struct vector p0, p1, p2;
-  int k = 30;
+
   // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
   for (struct face *f = file->faces; f != NULL; f = f->next) {
     // Obtenemos los vértices
     p0 = *get_vector(f->v1, file->vertexes);
     p1 = *get_vector(f->v2, file->vertexes);
     p2 = *get_vector(f->v3, file->vertexes);
-
-    // escalamos
-    p0.x *= k;
-    p0.y *= k;
-    p0.z *= k;
-
-    p1.x *= k;
-    p1.y *= k;
-    p1.z *= k;
-
-    p2.x *= k;
-    p2.y *= k;
-    p2.z *= k;
 
     // trasladamos
     p0.x += interpolated->x;
@@ -147,7 +174,220 @@ void generate_frame2(struct objfile *file, struct vector *interpolated) {
   // Rasterizamos el buffer
   rasterize(file->image, file->outputfile, file->output_dir);
 }
+void generate_frameFaceHiding(struct objfile *file,
+                              struct vector *interpolated) {
 
+  // Realizamos copia de los vértices
+  struct vector min;
+
+  if (file->rotar) {
+    file->alpha += M_PI / 12;
+    rotation_transform_x(file->alpha, file->vertexes);
+    rotation_transform_y(file->alpha, file->vertexes);
+  }
+
+  // Preparamos el framebuffer
+  prepare_framebuffer(file->image);
+
+  struct vector p0, p1, p2;
+  struct vector v1, v2, v3, a, b, n;
+
+  const struct vector view = {0, 0, 1};
+
+  // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
+  for (struct face *f = file->faces; f != NULL; f = f->next) {
+    // Obtenemos los vértices
+    p0 = *get_vector(f->v1, file->vertexes);
+    p1 = *get_vector(f->v2, file->vertexes);
+    p2 = *get_vector(f->v3, file->vertexes);
+
+    v1.x = p0.x;
+    v1.y = p0.y;
+    v1.z = p0.z;
+
+    v2.x = p1.x;
+    v2.y = p1.y;
+    v2.z = p1.z;
+
+    v3.x = p2.x;
+    v3.y = p2.y;
+    v3.z = p2.z;
+
+    // Dos vectores que pertenecen al plano del triángulo
+    a.x = v1.x - v2.x;
+    a.y = v1.y - v2.y;
+    a.z = v1.z - v2.z;
+
+    b.x = v1.x - v3.x;
+    b.y = v1.y - v3.y;
+    b.z = v1.z - v3.z;
+
+    // Calculamos normal
+
+    n.x = a.y * b.z - a.z * b.y;
+    n.y = a.z * b.x - a.x * b.z;
+    n.z = a.x * b.y - a.y * b.x;
+
+    if (n.x * view.x + n.y * view.y + n.z * view.z > 0) {
+      // trasladamos
+      p0.x += interpolated->x;
+      p0.y += interpolated->y;
+
+      p1.x += interpolated->x;
+      p1.y += interpolated->y;
+
+      p2.x += interpolated->x;
+      p2.y += interpolated->y;
+
+      // Dibujamos a pares los vectores
+      // p2 con p1
+      bresenham_line(round(p2.x), round(p2.y), round(p1.x), round(p1.y),
+                     file->image->buffer, file->image->res_x,
+                     file->image->res_y);
+      // p1 con p0
+      bresenham_line(round(p1.x), round(p1.y), round(p0.x), round(p0.y),
+                     file->image->buffer, file->image->res_x,
+                     file->image->res_y);
+      // p2 con p0
+      bresenham_line(round(p2.x), round(p2.y), round(p0.x), round(p0.y),
+                     file->image->buffer, file->image->res_x,
+                     file->image->res_y);
+    }
+  }
+  // Generamos nuevo nombre de salida
+  memset(file->outputfile, 0, 255);
+  sprintf(file->outputfile, "%04d", file->n_img++);
+  strcat(file->outputfile, ".ppm");
+  // Rasterizamos el buffer
+  rasterize(file->image, file->outputfile, file->output_dir);
+}
+void generate_frameFlatShading(struct objfile *file,
+                               struct vector *interpolated) {
+
+  if (file->rotar) {
+    file->alpha += M_PI / 12;
+    rotation_transform_x(file->alpha, file->vertexes);
+    rotation_transform_y(file->alpha, file->vertexes);
+  }
+
+  // Preparamos el framebuffer
+  prepare_framebuffer(file->image);
+
+  struct vector p0, p1, p2, p;
+  struct vector v1, v2, v3, a, b, n;
+  struct vector min, max;
+  float area, r0, g0, b0;
+  float w0, w1, w2;
+
+  const struct vector view = {0, 0, 1};
+  // Colores base
+  struct vector c0 = {1, 0, 0};
+  struct vector c1 = {0, 1, 0};
+  struct vector c2 = {0, 0, 1};
+  // time_t t;
+  srand(time(NULL));
+  // Dibujamos los segmentos de línea que definen a cada triángulo (cara)
+  for (struct face *f = file->faces; f != NULL; f = f->next) {
+    // Obtenemos los vértices
+    p0 = *get_vector(f->v1, file->vertexes);
+    p1 = *get_vector(f->v2, file->vertexes);
+    p2 = *get_vector(f->v3, file->vertexes);
+
+    v1.x = p0.x;
+    v1.y = p0.y;
+    v1.z = p0.z;
+
+    v2.x = p1.x;
+    v2.y = p1.y;
+    v2.z = p1.z;
+
+    v3.x = p2.x;
+    v3.y = p2.y;
+    v3.z = p2.z;
+
+    // Dos vectores que pertenecen al plano del triángulo
+    a.x = v1.x - v2.x;
+    a.y = v1.y - v2.y;
+    a.z = v1.z - v2.z;
+
+    b.x = v1.x - v3.x;
+    b.y = v1.y - v3.y;
+    b.z = v1.z - v3.z;
+
+    // Calculamos normal
+
+    n.x = a.y * b.z - a.z * b.y;
+    n.y = a.z * b.x - a.x * b.z;
+    n.z = a.x * b.y - a.y * b.x;
+
+    if (n.x * view.x + n.y * view.y + n.z * view.z > 0) {
+
+      // trasladamos
+      p0.x += interpolated->x;
+      p0.y += interpolated->y;
+
+      p1.x += interpolated->x;
+      p1.y += interpolated->y;
+
+      p2.x += interpolated->x;
+      p2.y += interpolated->y;
+
+      // Obtenemos el menor de las x, y z
+      min.x = min_float(p0.x, p1.x, p2.x);
+      min.y = min_float(p0.y, p1.y, p2.y);
+
+      // Obtenemos el mayor de las x,y, z
+      max.x = max_float(p0.x, p1.x, p2.x);
+      max.y = max_float(p0.y, p1.y, p2.y);
+
+      // Calculamos el área del triángulo
+      area = areaTriangle(&p0, &p1, &p2);
+      c0.x = ((rand() % 255)) / (float)255;
+      c0.y = ((rand() % 255)) / (float)255;
+      c0.z = ((rand() % 255)) / (float)255;
+
+      c1.x =((rand() % 255)) / (float)255;
+      c1.y = ((rand() % 255)) / (float)255;
+      c1.z = ((rand() % 255)) / (float)255;
+
+      c2.x = ((rand() % 255)) / (float)255;
+      c2.y = ((rand() % 255)) / (float)255;
+      c2.z = ((rand() % 255)) / (float)255;
+      for (int y = min.y + 0.5; y < max.y + 0.5; y++)
+        for (int x = min.x + 0.5; x < max.x + 0.5; x++) {
+          if (!isInImage(x, y, file->image->res_x, file->image->res_y))
+            continue;
+
+          p.x = x;
+          p.y = y;
+          p.z = 0;
+          w0 = areaTriangle(&p1, &p2, &p);
+          w1 = areaTriangle(&p2, &p0, &p);
+          w2 = areaTriangle(&p0, &p1, &p);
+          w0 /= area;
+          w1 /= area;
+          w2 /= area;
+          if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
+
+            r0 = w0 * c0.x + w1 * c1.x + w2 * c2.x;
+            g0 = w0 * c0.y + w1 * c1.y + w2 * c2.y;
+            b0 = w0 * c0.z + w1 * c1.z + w2 * c2.z;
+            if (isInImage(x, y, file->image->res_x, file->image->res_y)) {
+              file->image->buffer[file->image->res_x * y + x] =
+                  ((int)(r0 * 255) << 16) | ((int)(g0 * 255) << 8) |
+                  ((int)(b0 * 255));
+            }
+          }
+        }
+    }
+  }
+  // Generamos nuevo nombre de salida
+  memset(file->outputfile, 0, 255);
+  sprintf(file->outputfile, "%04d", file->n_img++);
+  strcat(file->outputfile, ".ppm");
+  // Rasterizamos el buffer
+  rasterize(file->image, file->outputfile, file->output_dir);
+}
 static void translate_to(struct point *p, struct point *q,
                          const struct point offset) {
   p->x -= offset.x;
@@ -326,15 +566,15 @@ void bresenham_interpolated(struct objfile *file, struct line_segment *line) {
 void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
   // Si no hay nombre de un archivo de entrada
-  if (!args_info->input_given || !args_info->output_given)
-    error("Especifique un nombre de archivo");
+  if (!args_info->input_given )
+    error("Especifique un nombre de archivo de entrada");
 
   // Obtenemos...
   // Nombre de archivo de entrada
   strcpy(file->inputfile, args_info->input_arg);
 
   // Nombre de archivo de salida
-  strcpy(file->outputfile, args_info->output_arg);
+  //strcpy(file->outputfile, args_info->output_arg);
 
   // Directorio de salida
   if (args_info->output_dir_given)
@@ -416,6 +656,16 @@ int main(int argc, char *argv[]) {
   rotation_transform_y(0, file->vertexes);
   rotation_transform_z(0, file->vertexes);
 
+  // Escalamos
+
+  if (args_info.scale_given) {
+    float t = strtod(args_info.scale_arg, NULL);
+    for (struct vector *tmp = file->vertexes; tmp != NULL; tmp = tmp->next) {
+      tmp->x *= t;
+      tmp->y *= t;
+      tmp->z *= t;
+    }
+  }
   // Normalizamos el objeto al espacio acotado por el cubo unitario
   //  normalize2(file->vertexes);
 
@@ -455,11 +705,11 @@ int main(int argc, char *argv[]) {
     }
   } else if (args_info.bezier_given) {
 
-    int numSegments = 50;
+    int segments = 50;
     float t, k1, k2, k3, k4;
     struct bezier_curve *curve = file->bezier;
-    for (int i = 0; i <= numSegments; ++i) {
-      t = i / (float)numSegments;
+    for (int i = 0; i <= segments; ++i) {
+      t = i / (float)segments;
       // Calculamos coeficientes
       k1 = (1 - t) * (1 - t) * (1 - t);
       k2 = 3 * (1 - t) * (1 - t) * t;
@@ -471,10 +721,12 @@ int main(int argc, char *argv[]) {
 
       interpolated.y = curve->p1.y * k1 + curve->p2.y * k2 + curve->p3.y * k3 +
                        curve->p4.y * k4;
-      generate_frame2(file, &interpolated);
-      // weight the four control points using coefficients
-
-      // point Pt = P1 * k1 + P2 * k2 + P3 * k3 + P4 * k4;
+      if (args_info.faceHiding_given)
+        generate_frameFaceHiding(file, &interpolated);
+      else if (args_info.flatShading_given)
+        generate_frameFlatShading(file, &interpolated);
+      else if (args_info.wireframe_given)
+        generate_frame2(file, &interpolated);
     }
   }
   return 0;

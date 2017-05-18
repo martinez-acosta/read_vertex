@@ -42,9 +42,6 @@ struct gengetopt_args_info
   char * input_arg;	/**< @brief archivo a leer.  */
   char * input_orig;	/**< @brief archivo a leer original value given at command line.  */
   const char *input_help; /**< @brief archivo a leer help description.  */
-  char * output_arg;	/**< @brief archivo de salida.  */
-  char * output_orig;	/**< @brief archivo de salida original value given at command line.  */
-  const char *output_help; /**< @brief archivo de salida help description.  */
   char * output_dir_arg;	/**< @brief directorio de salida.  */
   char * output_dir_orig;	/**< @brief directorio de salida original value given at command line.  */
   const char *output_dir_help; /**< @brief directorio de salida help description.  */
@@ -58,20 +55,25 @@ struct gengetopt_args_info
   char * resolution_arg;	/**< @brief resolución de la imagen en la forma <x,y>.  */
   char * resolution_orig;	/**< @brief resolución de la imagen en la forma <x,y> original value given at command line.  */
   const char *resolution_help; /**< @brief resolución de la imagen en la forma <x,y> help description.  */
+  const char *wireframe_help; /**< @brief activa el renderizado wireframe help description.  */
   char * bezier_arg;	/**< @brief curva de bézier a seguir en la forma p1,p2,p3,p4.  */
   char * bezier_orig;	/**< @brief curva de bézier a seguir en la forma p1,p2,p3,p4 original value given at command line.  */
   const char *bezier_help; /**< @brief curva de bézier a seguir en la forma p1,p2,p3,p4 help description.  */
+  const char *faceHiding_help; /**< @brief activa el ocultamiento de caras help description.  */
+  const char *flatShading_help; /**< @brief Activa flatShading help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int input_given ;	/**< @brief Whether input was given.  */
-  unsigned int output_given ;	/**< @brief Whether output was given.  */
   unsigned int output_dir_given ;	/**< @brief Whether output_dir was given.  */
   unsigned int line_given ;	/**< @brief Whether line was given.  */
   unsigned int rotate_given ;	/**< @brief Whether rotate was given.  */
   unsigned int scale_given ;	/**< @brief Whether scale was given.  */
   unsigned int resolution_given ;	/**< @brief Whether resolution was given.  */
+  unsigned int wireframe_given ;	/**< @brief Whether wireframe was given.  */
   unsigned int bezier_given ;	/**< @brief Whether bezier was given.  */
+  unsigned int faceHiding_given ;	/**< @brief Whether faceHiding was given.  */
+  unsigned int flatShading_given ;	/**< @brief Whether flatShading was given.  */
 
 } ;
 

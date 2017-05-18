@@ -6,10 +6,13 @@ version "0.1"
 
 #Options
 option "input" i "archivo a leer" string required
-option "output" o "archivo de salida" string required
+#option "output" o "archivo de salida" string required
 option "output_dir" d "directorio de salida" string optional
 option "line" l "segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal)" string optional
 option "rotate" r "Si rota" optional
 option "scale" s "Escalar la figura: s0,s1" string optional
 option "resolution" - "resolución de la imagen en la forma <x,y>" string required
+option "wireframe" - "activa el renderizado wireframe" optional
 option "bezier" b "curva de bézier a seguir en la forma p1,p2,p3,p4" string optional
+option "faceHiding" - "activa el ocultamiento de caras" optional
+option "flatShading" - "Activa flatShading" optional

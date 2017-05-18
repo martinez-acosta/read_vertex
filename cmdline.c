@@ -37,13 +37,15 @@ const char *gengetopt_args_info_help[] = {
   "  -h, --help               Print help and exit",
   "  -V, --version            Print version and exit",
   "  -i, --input=STRING       archivo a leer",
-  "  -o, --output=STRING      archivo de salida",
   "  -d, --output_dir=STRING  directorio de salida",
   "  -l, --line=STRING        segmentos de líneas a seguir:\n                             x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de\n                             línea deben ir separados por una diagonal)",
   "  -r, --rotate             Si rota",
   "  -s, --scale=STRING       Escalar la figura: s0,s1",
   "      --resolution=STRING  resolución de la imagen en la forma <x,y>",
+  "      --wireframe          activa el renderizado wireframe",
   "  -b, --bezier=STRING      curva de bézier a seguir en la forma p1,p2,p3,p4",
+  "      --faceHiding         activa el ocultamiento de caras",
+  "      --flatShading        Activa flatShading",
     0
 };
 
@@ -72,13 +74,15 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
   args_info->input_given = 0 ;
-  args_info->output_given = 0 ;
   args_info->output_dir_given = 0 ;
   args_info->line_given = 0 ;
   args_info->rotate_given = 0 ;
   args_info->scale_given = 0 ;
   args_info->resolution_given = 0 ;
+  args_info->wireframe_given = 0 ;
   args_info->bezier_given = 0 ;
+  args_info->faceHiding_given = 0 ;
+  args_info->flatShading_given = 0 ;
 }
 
 static
@@ -87,8 +91,6 @@ void clear_args (struct gengetopt_args_info *args_info)
   FIX_UNUSED (args_info);
   args_info->input_arg = NULL;
   args_info->input_orig = NULL;
-  args_info->output_arg = NULL;
-  args_info->output_orig = NULL;
   args_info->output_dir_arg = NULL;
   args_info->output_dir_orig = NULL;
   args_info->line_arg = NULL;
@@ -110,13 +112,15 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->help_help = gengetopt_args_info_help[0] ;
   args_info->version_help = gengetopt_args_info_help[1] ;
   args_info->input_help = gengetopt_args_info_help[2] ;
-  args_info->output_help = gengetopt_args_info_help[3] ;
-  args_info->output_dir_help = gengetopt_args_info_help[4] ;
-  args_info->line_help = gengetopt_args_info_help[5] ;
-  args_info->rotate_help = gengetopt_args_info_help[6] ;
-  args_info->scale_help = gengetopt_args_info_help[7] ;
-  args_info->resolution_help = gengetopt_args_info_help[8] ;
+  args_info->output_dir_help = gengetopt_args_info_help[3] ;
+  args_info->line_help = gengetopt_args_info_help[4] ;
+  args_info->rotate_help = gengetopt_args_info_help[5] ;
+  args_info->scale_help = gengetopt_args_info_help[6] ;
+  args_info->resolution_help = gengetopt_args_info_help[7] ;
+  args_info->wireframe_help = gengetopt_args_info_help[8] ;
   args_info->bezier_help = gengetopt_args_info_help[9] ;
+  args_info->faceHiding_help = gengetopt_args_info_help[10] ;
+  args_info->flatShading_help = gengetopt_args_info_help[11] ;
   
 }
 
@@ -202,8 +206,6 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
 
   free_string_field (&(args_info->input_arg));
   free_string_field (&(args_info->input_orig));
-  free_string_field (&(args_info->output_arg));
-  free_string_field (&(args_info->output_orig));
   free_string_field (&(args_info->output_dir_arg));
   free_string_field (&(args_info->output_dir_orig));
   free_string_field (&(args_info->line_arg));
@@ -250,8 +252,6 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "version", 0, 0 );
   if (args_info->input_given)
     write_into_file(outfile, "input", args_info->input_orig, 0);
-  if (args_info->output_given)
-    write_into_file(outfile, "output", args_info->output_orig, 0);
   if (args_info->output_dir_given)
     write_into_file(outfile, "output_dir", args_info->output_dir_orig, 0);
   if (args_info->line_given)
@@ -262,8 +262,14 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "scale", args_info->scale_orig, 0);
   if (args_info->resolution_given)
     write_into_file(outfile, "resolution", args_info->resolution_orig, 0);
+  if (args_info->wireframe_given)
+    write_into_file(outfile, "wireframe", 0, 0 );
   if (args_info->bezier_given)
     write_into_file(outfile, "bezier", args_info->bezier_orig, 0);
+  if (args_info->faceHiding_given)
+    write_into_file(outfile, "faceHiding", 0, 0 );
+  if (args_info->flatShading_given)
+    write_into_file(outfile, "flatShading", 0, 0 );
   
 
   i = EXIT_SUCCESS;
@@ -383,12 +389,6 @@ cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *pro
   if (! args_info->input_given)
     {
       fprintf (stderr, "%s: '--input' ('-i') option required%s\n", prog_name, (additional_error ? additional_error : ""));
-      error_occurred = 1;
-    }
-  
-  if (! args_info->output_given)
-    {
-      fprintf (stderr, "%s: '--output' ('-o') option required%s\n", prog_name, (additional_error ? additional_error : ""));
       error_occurred = 1;
     }
   
@@ -543,17 +543,19 @@ cmdline_parser_internal (
         { "help",	0, NULL, 'h' },
         { "version",	0, NULL, 'V' },
         { "input",	1, NULL, 'i' },
-        { "output",	1, NULL, 'o' },
         { "output_dir",	1, NULL, 'd' },
         { "line",	1, NULL, 'l' },
         { "rotate",	0, NULL, 'r' },
         { "scale",	1, NULL, 's' },
         { "resolution",	1, NULL, 0 },
+        { "wireframe",	0, NULL, 0 },
         { "bezier",	1, NULL, 'b' },
+        { "faceHiding",	0, NULL, 0 },
+        { "flatShading",	0, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVi:o:d:l:rs:b:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVi:d:l:rs:b:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -577,18 +579,6 @@ cmdline_parser_internal (
               &(local_args_info.input_given), optarg, 0, 0, ARG_STRING,
               check_ambiguity, override, 0, 0,
               "input", 'i',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'o':	/* archivo de salida.  */
-        
-        
-          if (update_arg( (void *)&(args_info->output_arg), 
-               &(args_info->output_orig), &(args_info->output_given),
-              &(local_args_info.output_given), optarg, 0, 0, ARG_STRING,
-              check_ambiguity, override, 0, 0,
-              "output", 'o',
               additional_error))
             goto failure;
         
@@ -665,6 +655,48 @@ cmdline_parser_internal (
                 &(local_args_info.resolution_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "resolution", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* activa el renderizado wireframe.  */
+          else if (strcmp (long_options[option_index].name, "wireframe") == 0)
+          {
+          
+          
+            if (update_arg( 0 , 
+                 0 , &(args_info->wireframe_given),
+                &(local_args_info.wireframe_given), optarg, 0, 0, ARG_NO,
+                check_ambiguity, override, 0, 0,
+                "wireframe", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* activa el ocultamiento de caras.  */
+          else if (strcmp (long_options[option_index].name, "faceHiding") == 0)
+          {
+          
+          
+            if (update_arg( 0 , 
+                 0 , &(args_info->faceHiding_given),
+                &(local_args_info.faceHiding_given), optarg, 0, 0, ARG_NO,
+                check_ambiguity, override, 0, 0,
+                "faceHiding", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* Activa flatShading.  */
+          else if (strcmp (long_options[option_index].name, "flatShading") == 0)
+          {
+          
+          
+            if (update_arg( 0 , 
+                 0 , &(args_info->flatShading_given),
+                &(local_args_info.flatShading_given), optarg, 0, 0, ARG_NO,
+                check_ambiguity, override, 0, 0,
+                "flatShading", '-',
                 additional_error))
               goto failure;
           

@@ -133,6 +133,12 @@ void bresenham_line(int x0, int y0, int x1, int y1, int *framebuffer,
           || p.y < 0 && q.y < 0
           || p.x < 0 && q.x < 0 && p.y < 0 && q.y < 0)
     return;
+
+  if (p.x > res_x && q.x > res_x
+          || p.y > res_y && q.y > res_y
+          || p.x > res_x && q.x > res_x && p.y > res_y && q.y > res_y)
+    return;
+
   // El punto p (punto inicial) debe estar más a la izquierda que
   // el punto q.
   if (q.x < p.x) {
