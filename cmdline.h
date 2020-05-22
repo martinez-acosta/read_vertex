@@ -45,9 +45,6 @@ struct gengetopt_args_info
   char * output_dir_arg;	/**< @brief directorio de salida.  */
   char * output_dir_orig;	/**< @brief directorio de salida original value given at command line.  */
   const char *output_dir_help; /**< @brief directorio de salida help description.  */
-  char * line_arg;	/**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal).  */
-  char * line_orig;	/**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal) original value given at command line.  */
-  const char *line_help; /**< @brief segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal) help description.  */
   const char *rotate_help; /**< @brief Si rota help description.  */
   char * scale_arg;	/**< @brief Escalar la figura: s0,s1.  */
   char * scale_orig;	/**< @brief Escalar la figura: s0,s1 original value given at command line.  */
@@ -66,7 +63,6 @@ struct gengetopt_args_info
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int input_given ;	/**< @brief Whether input was given.  */
   unsigned int output_dir_given ;	/**< @brief Whether output_dir was given.  */
-  unsigned int line_given ;	/**< @brief Whether line was given.  */
   unsigned int rotate_given ;	/**< @brief Whether rotate was given.  */
   unsigned int scale_given ;	/**< @brief Whether scale was given.  */
   unsigned int resolution_given ;	/**< @brief Whether resolution was given.  */

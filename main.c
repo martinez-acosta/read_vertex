@@ -82,7 +82,7 @@ void generate_frame(struct objfile *file, struct vector *interpolated) {
     file->alpha += M_PI / 12;
     // rotation_transform_x(M_PI, file->tmp_vertexes);
     rotation_transform_y(file->alpha, file->tmp_vertexes);
-    //rotation_transform_z(file->alpha, file->tmp_vertexes);
+    // rotation_transform_z(file->alpha, file->tmp_vertexes);
     // rotation_transform_x(file->alpha, file->tmp_vertexes);
     normalize_tmp(file);
   }
@@ -156,6 +156,10 @@ void generate_frame2(struct objfile *file, struct vector *interpolated) {
     p2.x += interpolated->x;
     p2.y += interpolated->y;
 
+    if ( !isInImage(p0.x,p0.y,file->image->res_x,file->image->res_y)
+            && !isInImage(p1.x,p1.y,file->image->res_x,file->image->res_y)
+         && !isInImage(p2.x,p2.y,file->image->res_x,file->image->res_y))
+        continue;
     // Dibujamos a pares los vectores
     // p2 con p1
     bresenham_line(round(p2.x), round(p2.y), round(p1.x), round(p1.y),
@@ -201,6 +205,10 @@ void generate_frameFaceHiding(struct objfile *file,
     p1 = *get_vector(f->v2, file->vertexes);
     p2 = *get_vector(f->v3, file->vertexes);
 
+    if ( !isInImage(p0.x+interpolated->x,p0.y+interpolated->y,file->image->res_x,file->image->res_y)
+            && !isInImage(p1.x+interpolated->x,p1.y+interpolated->y,file->image->res_x,file->image->res_y)
+         && !isInImage(p2.x+interpolated->x,p2.y+interpolated->y,file->image->res_x,file->image->res_y))
+        continue;
     v1.x = p0.x;
     v1.y = p0.y;
     v1.z = p0.z;
@@ -293,6 +301,11 @@ void generate_frameFlatShading(struct objfile *file,
     p1 = *get_vector(f->v2, file->vertexes);
     p2 = *get_vector(f->v3, file->vertexes);
 
+    if ( !isInImage(p0.x+interpolated->x,p0.y+interpolated->y,file->image->res_x,file->image->res_y)
+            && !isInImage(p1.x+interpolated->x,p1.y+interpolated->y,file->image->res_x,file->image->res_y)
+         && !isInImage(p2.x+interpolated->x,p2.y+interpolated->y,file->image->res_x,file->image->res_y))
+        continue;
+
     v1.x = p0.x;
     v1.y = p0.y;
     v1.z = p0.z;
@@ -346,7 +359,7 @@ void generate_frameFlatShading(struct objfile *file,
       c0.y = ((rand() % 255)) / (float)255;
       c0.z = ((rand() % 255)) / (float)255;
 
-      c1.x =((rand() % 255)) / (float)255;
+      c1.x = ((rand() % 255)) / (float)255;
       c1.y = ((rand() % 255)) / (float)255;
       c1.z = ((rand() % 255)) / (float)255;
 
@@ -566,7 +579,7 @@ void bresenham_interpolated(struct objfile *file, struct line_segment *line) {
 void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
   // Si no hay nombre de un archivo de entrada
-  if (!args_info->input_given )
+  if (!args_info->input_given)
     error("Especifique un nombre de archivo de entrada");
 
   // Obtenemos...
@@ -574,7 +587,7 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
   strcpy(file->inputfile, args_info->input_arg);
 
   // Nombre de archivo de salida
-  //strcpy(file->outputfile, args_info->output_arg);
+  // strcpy(file->outputfile, args_info->output_arg);
 
   // Directorio de salida
   if (args_info->output_dir_given)
@@ -602,8 +615,8 @@ void init(struct gengetopt_args_info *args_info, struct objfile *file) {
 
   file->image->res_y = strtol(str_tmp, (char **)NULL, 10);
   // Obtenemos segmentos de líneas
-  if (args_info->line_given)
-    get_lines(file, args_info->line_arg);
+  // if (args_info->line_given)
+  // get_lines(file, args_info->line_arg);
   // Obtenemos curva de bézier
   if (args_info->bezier_given)
     get_bezier(file, args_info->bezier_arg);
@@ -671,7 +684,7 @@ int main(int argc, char *argv[]) {
 
   struct vector interpolated;
   int x, y;
-  if (args_info.line_given) {
+  /*if (args_info.line_given) {
     // Por cada segmento de línea
     for (struct line_segment *line = file->lines; line != NULL;
          line = line->next) {
@@ -703,7 +716,7 @@ int main(int argc, char *argv[]) {
         bresenham_interpolated(file, line);
       }
     }
-  } else if (args_info.bezier_given) {
+  } else*/ if (args_info.bezier_given) {
 
     int segments = 50;
     float t, k1, k2, k3, k4;

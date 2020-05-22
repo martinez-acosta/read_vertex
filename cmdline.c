@@ -38,7 +38,6 @@ const char *gengetopt_args_info_help[] = {
   "  -V, --version            Print version and exit",
   "  -i, --input=STRING       archivo a leer",
   "  -d, --output_dir=STRING  directorio de salida",
-  "  -l, --line=STRING        segmentos de líneas a seguir:\n                             x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de\n                             línea deben ir separados por una diagonal)",
   "  -r, --rotate             Si rota",
   "  -s, --scale=STRING       Escalar la figura: s0,s1",
   "      --resolution=STRING  resolución de la imagen en la forma <x,y>",
@@ -75,7 +74,6 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->version_given = 0 ;
   args_info->input_given = 0 ;
   args_info->output_dir_given = 0 ;
-  args_info->line_given = 0 ;
   args_info->rotate_given = 0 ;
   args_info->scale_given = 0 ;
   args_info->resolution_given = 0 ;
@@ -93,8 +91,6 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->input_orig = NULL;
   args_info->output_dir_arg = NULL;
   args_info->output_dir_orig = NULL;
-  args_info->line_arg = NULL;
-  args_info->line_orig = NULL;
   args_info->scale_arg = NULL;
   args_info->scale_orig = NULL;
   args_info->resolution_arg = NULL;
@@ -113,14 +109,13 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->version_help = gengetopt_args_info_help[1] ;
   args_info->input_help = gengetopt_args_info_help[2] ;
   args_info->output_dir_help = gengetopt_args_info_help[3] ;
-  args_info->line_help = gengetopt_args_info_help[4] ;
-  args_info->rotate_help = gengetopt_args_info_help[5] ;
-  args_info->scale_help = gengetopt_args_info_help[6] ;
-  args_info->resolution_help = gengetopt_args_info_help[7] ;
-  args_info->wireframe_help = gengetopt_args_info_help[8] ;
-  args_info->bezier_help = gengetopt_args_info_help[9] ;
-  args_info->faceHiding_help = gengetopt_args_info_help[10] ;
-  args_info->flatShading_help = gengetopt_args_info_help[11] ;
+  args_info->rotate_help = gengetopt_args_info_help[4] ;
+  args_info->scale_help = gengetopt_args_info_help[5] ;
+  args_info->resolution_help = gengetopt_args_info_help[6] ;
+  args_info->wireframe_help = gengetopt_args_info_help[7] ;
+  args_info->bezier_help = gengetopt_args_info_help[8] ;
+  args_info->faceHiding_help = gengetopt_args_info_help[9] ;
+  args_info->flatShading_help = gengetopt_args_info_help[10] ;
   
 }
 
@@ -208,8 +203,6 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->input_orig));
   free_string_field (&(args_info->output_dir_arg));
   free_string_field (&(args_info->output_dir_orig));
-  free_string_field (&(args_info->line_arg));
-  free_string_field (&(args_info->line_orig));
   free_string_field (&(args_info->scale_arg));
   free_string_field (&(args_info->scale_orig));
   free_string_field (&(args_info->resolution_arg));
@@ -254,8 +247,6 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "input", args_info->input_orig, 0);
   if (args_info->output_dir_given)
     write_into_file(outfile, "output_dir", args_info->output_dir_orig, 0);
-  if (args_info->line_given)
-    write_into_file(outfile, "line", args_info->line_orig, 0);
   if (args_info->rotate_given)
     write_into_file(outfile, "rotate", 0, 0 );
   if (args_info->scale_given)
@@ -544,7 +535,6 @@ cmdline_parser_internal (
         { "version",	0, NULL, 'V' },
         { "input",	1, NULL, 'i' },
         { "output_dir",	1, NULL, 'd' },
-        { "line",	1, NULL, 'l' },
         { "rotate",	0, NULL, 'r' },
         { "scale",	1, NULL, 's' },
         { "resolution",	1, NULL, 0 },
@@ -555,7 +545,7 @@ cmdline_parser_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVi:d:l:rs:b:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVi:d:rs:b:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -591,18 +581,6 @@ cmdline_parser_internal (
               &(local_args_info.output_dir_given), optarg, 0, 0, ARG_STRING,
               check_ambiguity, override, 0, 0,
               "output_dir", 'd',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'l':	/* segmentos de líneas a seguir: x0,y0,x1,y1/x2,y2,x3,y3/... (varios segmentos de línea deben ir separados por una diagonal).  */
-        
-        
-          if (update_arg( (void *)&(args_info->line_arg), 
-               &(args_info->line_orig), &(args_info->line_given),
-              &(local_args_info.line_given), optarg, 0, 0, ARG_STRING,
-              check_ambiguity, override, 0, 0,
-              "line", 'l',
               additional_error))
             goto failure;
         
